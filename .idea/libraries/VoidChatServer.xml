@@ -1,0 +1,10 @@
+<component name="libraryTable">
+  <library name="VoidChatServer">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/VoidChatServer/sqlite-jdbc-3.8.7.jar!/" />
+      <root url="jar://$PROJECT_DIR$/VoidChatServer/javax.mail.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
