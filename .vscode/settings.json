@@ -1,0 +1,10 @@
+{
+    "java.project.sourcePaths": [
+        "VoidChatServer/src/view",
+        "VoidChatServer/src/utilitez",
+        "VoidChatServer/src/model",
+        "VoidChatServer/src/controller",
+        "VoidChatClient/src/view",
+        "VoidChatClient/src/controller"
+    ]
+}

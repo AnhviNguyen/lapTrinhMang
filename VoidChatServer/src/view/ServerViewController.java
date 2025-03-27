@@ -6,6 +6,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.ResourceBundle;
 import java.util.logging.Level;
@@ -316,8 +317,12 @@ public class ServerViewController implements Initializable {
         firstNameCol.setOnEditCommit((TableColumn.CellEditEvent<UserFx, String> event) -> {
             UserFx user = ((UserFx) event.getTableView().getItems().get(event.getTablePosition().getRow()));
             user.setFname(event.getNewValue());
-            serverView.updateUser(new User(user.getUsername(), user.getFname(),
-                    user.getLname(), user.getGender(), user.getCountry()));
+            try {
+                serverView.updateUser(new User(user.getUsername(), user.getFname(),
+                        user.getLname(), user.getGender(), user.getCountry()));
+            } catch (RemoteException e) {
+                throw new RuntimeException(e);
+            }
         });
 
         lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lname"));
@@ -325,8 +330,12 @@ public class ServerViewController implements Initializable {
         lastNameCol.setOnEditCommit((TableColumn.CellEditEvent<UserFx, String> event) -> {
             UserFx user = ((UserFx) event.getTableView().getItems().get(event.getTablePosition().getRow()));
             user.setLname(event.getNewValue());
-            serverView.updateUser(new User(user.getUsername(), user.getFname(),
-                    user.getLname(), user.getGender(), user.getCountry()));
+            try {
+                serverView.updateUser(new User(user.getUsername(), user.getFname(),
+                        user.getLname(), user.getGender(), user.getCountry()));
+            } catch (RemoteException e) {
+                throw new RuntimeException(e);
+            }
         });
 
         emailCol.setCellValueFactory(new PropertyValueFactory<>("email"));
@@ -336,8 +345,12 @@ public class ServerViewController implements Initializable {
         genderCol.setOnEditCommit((TableColumn.CellEditEvent<UserFx, String> event) -> {
             UserFx user = ((UserFx) event.getTableView().getItems().get(event.getTablePosition().getRow()));
             user.setGender(event.getNewValue());
-            serverView.updateUser(new User(user.getUsername(), user.getFname(),
-                    user.getLname(), user.getGender(), user.getCountry()));
+            try {
+                serverView.updateUser(new User(user.getUsername(), user.getFname(),
+                        user.getLname(), user.getGender(), user.getCountry()));
+            } catch (RemoteException e) {
+                throw new RuntimeException(e);
+            }
         });
 
         tableView.setItems(data);

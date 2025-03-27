@@ -1,20 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.control.Button?>
-<?import javafx.scene.control.TextField?>
-<?import javafx.scene.layout.AnchorPane?>
-<?import javafx.scene.text.Font?>
-<?import javafx.scene.text.Text?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.text.*?>
 
-<AnchorPane id="AnchorPane" prefHeight="400.0" prefWidth="394.0" style="-fx-background-color: #535f85;" xmlns="http://javafx.com/javafx/8.0.111" xmlns:fx="http://javafx.com/fxml/1" fx:controller="view.LaunchSceneController">
-   <children>
-        <Text fill="#e4e4e4" layoutX="101.0" layoutY="140.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Void Chat" textAlignment="CENTER" wrappingWidth="192.2138671875">
-         <font>
-            <Font name="System Bold" size="34.0" />
-         </font>
-      </Text>
-      <TextField fx:id="txtFieldHostIP" layoutX="124.0" layoutY="200.0" promptText="Host IP" />
-      <Button fx:id="btnConnect" layoutX="173.0" layoutY="237.0" mnemonicParsing="false" onAction="#btnConnectAction" text="connect" />
-      <Text fill="#e4e4e4" layoutX="129.0" layoutY="189.0" strokeType="OUTSIDE" strokeWidth="0.0" text="type host ip to connect on" />
-   </children>
+<AnchorPane id="AnchorPane" prefHeight="400.0" prefWidth="600.0" style="-fx-background-color: #ffffff;" xmlns="http://javafx.com/javafx/8.0.111" xmlns:fx="http://javafx.com/fxml/1" fx:controller="view.LaunchSceneController">
+    <children>
+        <VBox alignment="CENTER" spacing="15" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+            <!-- App Logo -->
+            <ImageView fitHeight="80.0" fitWidth="240.0" preserveRatio="true">
+                <image>
+                    <Image url="@../resouces/Voidlogo.png"/>
+                </image>
+            </ImageView>
+            
+            <!-- Loading Spinner -->
+            <ProgressIndicator prefHeight="30.0" prefWidth="30.0" style="-fx-progress-color: #1877f2;" />
+            
+            <!-- Connection Status -->
+            <Label fx:id="status" text="Connecting to server..." style="-fx-font-size: 14; -fx-text-fill: #65676b;"/>
+            
+            <!-- Server IP Field -->
+            <HBox alignment="CENTER" spacing="8">
+                <TextField fx:id="txtFieldHostIP" prefWidth="200.0" promptText="Server IP" style="-fx-background-color: #f0f2f5; -fx-padding: 8 12; -fx-background-radius: 6;"/>
+                <Button fx:id="btnConnect" onAction="#btnConnectAction" text="Connect" 
+                        style="-fx-background-color: #1877f2; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 15; -fx-background-radius: 6;"/>
+            </HBox>
+            
+            <!-- Help Text -->
+            <Label text="Enter 'localhost' or server IP address" style="-fx-font-size: 11; -fx-text-fill: #8a8d91;"/>
+        </VBox>
+    </children>
 </AnchorPane>

@@ -1,6 +1,8 @@
 package view;
 
 import controller.ServerController;
+
+import java.rmi.RemoteException;
 import java.util.ArrayList;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -92,7 +94,7 @@ public class ServerView extends Application implements ServerViewInt {
         return null;
     }
 
-    public void updateUser(User user) {
+    public void updateUser(User user) throws RemoteException {
         controller.updateUser(user);
     }
 

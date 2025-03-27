@@ -280,7 +280,7 @@ public class ServerController implements ServerControllerInt {
         return null;
     }
 
-    public void updateUser(User user) {
+    public void updateUser(User user) throws RemoteException {
         model.updateUser(user);
     }
 

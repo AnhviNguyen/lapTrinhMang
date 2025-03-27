@@ -17,6 +17,7 @@ public interface Notification extends Serializable {
     public final static int FRIEND_REQUSET = 3;
     public final static int SERVER_MESSAGE = 4;
     public final static int FRIEND_BUSY = 5;
+    public final static int GENERAL = 6;
 
     /**
      * send notification

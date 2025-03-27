@@ -595,20 +595,6 @@ public class ServerModel extends UnicastRemoteObject implements ServerModelInt {
         return users.size() == 0 ? null : users;
     }
 
-    public synchronized void updateUser(User user) {
-        try {
-            getConnection();
-            String query = "update UserTable set fname='" + user.getFname()
-                    + "',lname='" + user.getLname() + "',gender='" + user.getGender() + "',country='"
-                    + user.getCountry() + "' where username= '" + user.getUsername() + "'";
-            statement = connection.createStatement();
-            statement.executeUpdate(query);
-
-        } catch (SQLException ex) {
-            ex.printStackTrace();
-        }
-        closeResources();
-    }
 
     public synchronized void GenerateUserFX(User user) {
         UserFx userFx = new UserFx(user.getUsername(), user.getEmail(), user.getFname(), user.getLname(),

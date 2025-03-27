@@ -343,14 +343,15 @@ public class ChatSceneController implements Initializable {
 
         String tabName;
         String[] groupName = message.getTo().split("##");
-
+        ;
         // message sent to group? open tab (group name) : open tab(sender name)
         if (message.getTo().contains("##")) {
+            ////////////////////
             tabName = message.getTo();
+            /////////////////////
         } else {
             tabName = message.getFrom();
         }
-
         Platform.runLater(new Runnable() {
             @Override
             public void run() {
@@ -367,20 +368,10 @@ public class ChatSceneController implements Initializable {
                             newTab.setText(tabName);
                         }
 
-                        // Add icon for tab
-                        try {
-                            ImageView iv = new ImageView(
-                                    new Image(getClass().getResource("/resouces/user.png").openStream()));
-                            iv.setFitHeight(20);
-                            iv.setFitWidth(20);
-                            newTab.setGraphic(iv);
-                        } catch (IOException ex) {
-                            ex.printStackTrace();
-                        }
-
                         newTab.setOnCloseRequest(new EventHandler<Event>() {
                             @Override
                             public void handle(Event event) {
+
                                 tabsOpened.remove(newTab.getId());
                                 tabsControllers.remove(newTab.getId());
                             }
@@ -402,6 +393,7 @@ public class ChatSceneController implements Initializable {
 
                     } else {
                         // tab already exist so open it and pass msg to its controller
+
                         tabPane.getSelectionModel().select(tabsOpened.get(tabName));
                         tabsControllers.get(tabName).reciveMsg(message);
                     }
@@ -413,6 +405,7 @@ public class ChatSceneController implements Initializable {
     }
 
     public void createGroup(String groupName) {
+
         String[] splitString = groupName.split("##");
 
         Platform.runLater(new Runnable() {
@@ -420,50 +413,33 @@ public class ChatSceneController implements Initializable {
             public void run() {
                 try {
                     if (!tabsOpened.containsKey(groupName)) {
-                        // Create new tab
+
+                        // create new tab
                         Tab newTab = new Tab();
                         newTab.setId(groupName);
                         newTab.setText(splitString[2]);
-                        newTab.setClosable(true);
-
-                        // Add icon for tab
-                        try {
-                            ImageView iv = new ImageView(
-                                    new Image(getClass().getResource("/resouces/group.png").openStream()));
-                            iv.setFitHeight(20);
-                            iv.setFitWidth(20);
-                            newTab.setGraphic(iv);
-                        } catch (IOException ex) {
-                            ex.printStackTrace();
-                        }
-
-                        // Add close handler
                         newTab.setOnCloseRequest(new EventHandler<Event>() {
                             @Override
                             public void handle(Event event) {
+
                                 tabsOpened.remove(newTab.getId());
                                 tabsControllers.remove(newTab.getId());
                             }
                         });
 
-                        // Load ChatBox for this group
-                        FXMLLoader loader = new FXMLLoader(getClass().getResource("ChatBox.fxml"));
-                        Message message = new Message();
-                        message.setTo(groupName);
-                        ChatBoxController chatBoxController = new ChatBoxController(message);
-                        loader.setController(chatBoxController);
+                        tabPane.getTabs().add(newTab);
+                        tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.ALL_TABS);
 
-                        // Set content and store references
+                        // load new chat box
+                        FXMLLoader loader = new FXMLLoader(getClass().getResource("ChatBox.fxml"));
+                        ChatBoxController chatBoxController = new ChatBoxController(groupName);
+                        loader.setController(chatBoxController);
                         newTab.setContent(loader.load());
+
+                        // put the new tab and controller in the map
                         tabsOpened.put(groupName, newTab);
                         tabsControllers.put(groupName, chatBoxController);
 
-                        // Add to tabPane and select
-                        tabPane.getTabs().add(newTab);
-                        tabPane.getSelectionModel().select(newTab);
-                    } else {
-                        // Tab already exists, just select it
-                        tabPane.getSelectionModel().select(tabsOpened.get(groupName));
                     }
                 } catch (IOException ex) {
                     ex.printStackTrace();
@@ -681,7 +657,7 @@ public class ChatSceneController implements Initializable {
                 public void handle(MouseEvent event) {
                     try {
                         String friendName = aListViewFriends.getSelectionModel().getSelectedItem().getUsername();
-                        cellClickAction(event, friendName);
+                        cellClickAction(friendName);
                     } catch (NullPointerException ex) {
                     }
 
@@ -725,7 +701,7 @@ public class ChatSceneController implements Initializable {
                 public void handle(MouseEvent event) {
                     try {
                         String friendName = aListViewFamily.getSelectionModel().getSelectedItem().getUsername();
-                        cellClickAction(event, friendName);
+                        cellClickAction(friendName);
                     } catch (NullPointerException ex) {
                     }
 
@@ -786,62 +762,41 @@ public class ChatSceneController implements Initializable {
         return flow;
     }
 
-    /**
-     * Action for clicking on a friend in the contacts list
-     * Opens a new chat tab for the selected friend
-     * 
-     * @param event  - Mouse click event
-     * @param friend - Selected friend name
-     */
-    public void cellClickAction(MouseEvent event, String friend) {
+    void cellClickAction(String friendName) {
+        if (!tabsOpened.containsKey(friendName)) {
+            try {
 
-        try {
-            // Check if tab already exists
-            if (!tabsOpened.containsKey(friend)) {
-                // Create new tab
                 Tab newTab = new Tab();
-                newTab.setId(friend);
-                newTab.setText(friend);
+
+                newTab.setId(friendName);
+                newTab.setText(friendName);
+
                 newTab.setClosable(true);
-
-                // Add icon for tab
-                try {
-                    ImageView iv = new ImageView(new Image(getClass().getResource("/resouces/user.png").openStream()));
-                    iv.setFitHeight(20);
-                    iv.setFitWidth(20);
-                    newTab.setGraphic(iv);
-                } catch (IOException ex) {
-                    ex.printStackTrace();
-                }
-
-                // Add close handler to remove tab from maps
                 newTab.setOnCloseRequest(new EventHandler<Event>() {
                     @Override
                     public void handle(Event event) {
+
                         tabsOpened.remove(newTab.getId());
                         tabsControllers.remove(newTab.getId());
                     }
                 });
 
-                // Load chat box
+                tabPane.getTabs().add(newTab);
+                tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.ALL_TABS);
+
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("ChatBox.fxml"));
-                ChatBoxController chatBoxController = new ChatBoxController(friend);
+                ChatBoxController chatBoxController = new ChatBoxController(friendName); // receiver
                 loader.setController(chatBoxController);
 
-                // Set content and store references
-                newTab.setContent(loader.load());
-                tabsOpened.put(friend, newTab);
-                tabsControllers.put(friend, chatBoxController);
+                tabsOpened.put(friendName, newTab);
+                tabsControllers.put(friendName, chatBoxController);
 
-                // Add to tabPane and select
-                tabPane.getTabs().add(newTab);
-                tabPane.getSelectionModel().select(newTab);
-            } else {
-                // Tab already exists, just select it
-                tabPane.getSelectionModel().select(tabsOpened.get(friend));
+                newTab.setContent(loader.load());
+            } catch (IOException ex) {
+                ex.printStackTrace();
             }
-        } catch (IOException ex) {
-            ex.printStackTrace();
+        } else {
+            tabPane.getSelectionModel().select(tabsOpened.get(friendName));
         }
     }
     // -- end merna ---
@@ -890,52 +845,6 @@ public class ChatSceneController implements Initializable {
 
             // Load the HomeBox.fxml content
             homeBox.setContent(FXMLLoader.load(getClass().getResource("HomeBox.fxml")));
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-    }
-
-    public void createChatBoxFXML(String friendName) {
-        System.out.println(">> ChatSceneController: create chat box for friend: " + friendName);
-        try {
-            // if this friend is already opened return
-            if (tabsOpened.containsKey(friendName)) {
-                tabPane.getSelectionModel().select(tabsOpened.get(friendName));
-                return;
-            }
-
-            // create the tab
-            Tab newTab = new Tab(friendName);
-
-            // load chat box
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("ChatBox.fxml"));
-            final Parent parentChatBox = loader.load();
-
-            // controller for chat box
-            ChatBoxController chatBoxController = loader.getController();
-            chatBoxController.setChatSceneController(this);
-            chatBoxController.init(friendName); // initialize chat box controller
-
-            tabsControllers.put(friendName, chatBoxController);
-
-            // add the loaded chat box to the tab
-            newTab.setContent(parentChatBox);
-
-            // prevent tab from being closed
-            newTab.setClosable(true);
-
-            // set icon image for tab
-            ImageView img = new ImageView(new Image(getClass().getResource("/resouces/user.png").openStream()));
-            img.setFitWidth(14);
-            img.setFitHeight(14);
-            newTab.setGraphic(img);
-
-            // add the new tab
-            tabPane.getTabs().add(newTab);
-            tabsOpened.put(friendName, newTab);
-
-            // select the new tab
-            tabPane.getSelectionModel().select(newTab);
         } catch (IOException ex) {
             ex.printStackTrace();
         }

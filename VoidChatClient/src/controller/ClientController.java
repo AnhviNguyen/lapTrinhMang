@@ -54,15 +54,29 @@ public class ClientController implements ClientControllerInt {
     @Override
     public boolean conncetToServer(String host) {
         try {
+            System.out.println("Attempting to connect to server at: " + host);
+
+            // Create the registry with the specified host and port
             Registry reg = LocateRegistry.getRegistry(host, 1050);
 
+            // Look up the server object
             serverModelInt = (ServerModelInt) reg.lookup("voidChatServer");
+
+            System.out.println("Successfully connected to server");
             return true;
-        } catch (RemoteException | NotBoundException ex) {
+        } catch (RemoteException ex) {
+            System.err.println("Remote exception while connecting to server: " + ex.getMessage());
+            ex.printStackTrace();
+            return false;
+        } catch (NotBoundException ex) {
+            System.err.println("Server service 'voidChatServer' not bound: " + ex.getMessage());
+            ex.printStackTrace();
+            return false;
+        } catch (Exception ex) {
+            System.err.println("Unexpected error connecting to server: " + ex.getMessage());
             ex.printStackTrace();
             return false;
         }
-
     }
 
     @Override
@@ -149,7 +163,7 @@ public class ClientController implements ClientControllerInt {
     public void logout() {
         try {
             serverModelInt.unregister(loginUser.getUsername());
-            checkServerStatus.stop();
+            checkServerStatus.interrupt();
         } catch (RemoteException ex) {
             ex.printStackTrace();
         }
@@ -292,7 +306,7 @@ public class ClientController implements ClientControllerInt {
         } catch (InterruptedException | RemoteException ex) {
             ex.printStackTrace();
             loadErrorServer();
-            checkServerStatus.stop();
+            checkServerStatus.interrupt();
         }
     }
 
@@ -319,14 +333,12 @@ public class ClientController implements ClientControllerInt {
     @Override
     public boolean updateUser(User user) {
         try {
-            boolean updated = serverModelInt.updateUser(user);
-            if (updated) {
-                // Update the local user information if it's the current user
-                if (user.getUsername().equals(loginUser.getUsername())) {
-                    loginUser = user;
-                }
+            boolean success = serverModelInt.updateUser(user);
+            if (success) {
+                // Update the local loginUser object with new information
+                this.loginUser = user;
             }
-            return updated;
+            return success;
         } catch (RemoteException ex) {
             ex.printStackTrace();
             return false;

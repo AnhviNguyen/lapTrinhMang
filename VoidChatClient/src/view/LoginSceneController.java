@@ -40,9 +40,9 @@ public class LoginSceneController implements Initializable {
     private ClientView clinetView;
 
     public LoginSceneController() {
-        //get instance form view
+        // get instance form view
         clinetView = ClientView.getInstance();
-        
+
     }
 
     @FXML
@@ -51,7 +51,7 @@ public class LoginSceneController implements Initializable {
 
             String errorMsg = "";
 
-            //getting data 
+            // getting data
             String username = txtUserName.getText();
             String password = txtPassword.getText();
 
@@ -69,7 +69,7 @@ public class LoginSceneController implements Initializable {
                 return;
             }
 
-            //login to server .. 
+            // login to server ..
             if (clinetView.signin(username, password) == null) {
                 clinetView.showError("Login Error", "Login Error", "Can't Login right now ..\n"
                         + "maybe wrong username or password..\n"
@@ -80,8 +80,8 @@ public class LoginSceneController implements Initializable {
             ///////////////////////////////////////////////////////
             clinetView.changeStatus("online");
             ////////////////////////////////////////////////////////
-            //login successfully 
-            ((Node) (event.getSource())).getScene().getWindow().hide(); //this line to hide login window ..
+            // login successfully
+            ((Node) (event.getSource())).getScene().getWindow().hide(); // this line to hide login window ..
             Parent parent = FXMLLoader.load(getClass().getResource("ChatScene.fxml"));
             Stage stage = new Stage();
             Scene scene = new Scene(parent);
@@ -95,7 +95,7 @@ public class LoginSceneController implements Initializable {
                 clinetView.changeStatus("offline");
                 //////////////////////////
                 Platform.exit();
-                //TODO : why not close
+                // TODO : why not close
                 System.exit(0);
             });
         } catch (IOException ex) {
@@ -106,12 +106,29 @@ public class LoginSceneController implements Initializable {
         }
     }
 
+    /**
+     * Event handler for the Sign Up button
+     */
+    @FXML
+    private void btnSignupAction(ActionEvent event) {
+        try {
+            Parent parent = FXMLLoader.load(getClass().getResource("SignupScence.fxml"));
+            Stage stage = clinetView.getMainStage();
+
+            Scene scene = new Scene(parent);
+            stage.setScene(scene);
+            stage.setTitle("Create an account");
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+
     @FXML
     private void linkCreatAccountAction(ActionEvent event) {
         try {
             Parent parent = FXMLLoader.load(getClass().getResource("SignupScence.fxml"));
             Stage stage = clinetView.getMainStage();
-            
+
             Scene scene = new Scene(parent);
             stage.setScene(scene);
             stage.setTitle("Create an account");
