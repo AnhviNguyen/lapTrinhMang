@@ -424,8 +424,25 @@
 
 .update-user-dialog #imageViewProfile {
     -fx-background-color: #f0f2f5;
-    -fx-background-radius: 50%;
-    -fx-border-radius: 50%;
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
     -fx-border-color: #e4e4e4;
     -fx-border-width: 2px;
+}
+
+/* General circular image style */
+.image-view {
+    -fx-background-radius: 50%;
+    -fx-border-radius: 50%;
+}
+
+/* Profile picture container */
+.profile-picture-container {
+    -fx-background-radius: 50%;
+    -fx-border-radius: 50%;
+}
+
+.profile-picture-container .image-view {
+    -fx-background-radius: 50%;
+    -fx-border-radius: 50%;
 } 

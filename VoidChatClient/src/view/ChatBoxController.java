@@ -1271,11 +1271,17 @@ public class ChatBoxController implements Initializable {
      * Create simple circular clipping for avatar images
      */
     private void makeCircularImage(ImageView imageView, double radius) {
-        try {
-            Circle clip = new Circle(radius, radius, radius);
+        if (imageView != null) {
+            // Calculate center point based on image dimensions
+            double centerX = imageView.getFitWidth() / 2;
+            double centerY = imageView.getFitHeight() / 2;
+
+            // Create a perfect circle clip
+            Circle clip = new Circle(centerX, centerY, radius);
             imageView.setClip(clip);
-        } catch (Exception e) {
-            System.out.println("Error making circular image: " + e.getMessage());
+
+            // Add style class for consistent styling
+            imageView.getStyleClass().add("image-view");
         }
     }
 

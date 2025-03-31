@@ -123,6 +123,9 @@ public class ChatSceneController implements Initializable {
     @FXML
     private ListView<HBox> listViewFamily;
 
+    @FXML
+    private TextField txtFieldSearch;
+
     public ChatSceneController() {
         // get instance form view
         clinetView = ClientView.getInstance();
@@ -757,49 +760,80 @@ public class ChatSceneController implements Initializable {
         contactBox.setPrefHeight(40);
         contactBox.setStyle("-fx-background-color: #f2f2f2; -fx-background-radius: 5;");
 
+        // Create container for avatar
+        StackPane avatarContainer = new StackPane();
+        avatarContainer.setPrefSize(35, 35);
+        avatarContainer.setMaxSize(35, 35);
+        avatarContainer.setMinSize(35, 35);
+
         // Add avatar with proper sizing
         ImageView imageView = new ImageView();
         imageView.setFitWidth(35);
         imageView.setFitHeight(35);
-        imageView.setPreserveRatio(true);
+        imageView.setPreserveRatio(false); // Disable preserve ratio to allow cover
+        imageView.setSmooth(true); // Enable smooth scaling
         imageView.setCache(false); // Disable caching to ensure fresh image
 
         try {
             // Check if user has a custom avatar
             if (friend.getImage() != null && !friend.getImage().trim().isEmpty()) {
-                // Load custom avatar with cache busting using timestamp
                 String imagePath = friend.getImage();
                 if (imagePath.startsWith("http")) {
                     String separator = imagePath.contains("?") ? "&" : "?";
-                    // Always use current time for cache busting
                     imagePath += separator + "t=" + System.currentTimeMillis();
                 }
                 Image avatar = new Image(imagePath, 35, 35, true, false);
                 imageView.setImage(avatar);
-                System.out.println("Loaded custom avatar for: " + friend.getUsername());
             } else {
                 // Load default avatar based on gender
                 String defaultPath = friend.getGender() != null &&
                         friend.getGender().equalsIgnoreCase("Female") ? "/resouces/female.png" : "/resouces/user.png";
 
-                // Add timestamp for cache busting
                 String fullPath = getClass().getResource(defaultPath).toExternalForm() +
                         "?t=" + System.currentTimeMillis();
 
                 imageView.setImage(new Image(fullPath, true));
             }
 
-            // Make avatar circular
-            Circle clip = new Circle(35 / 2, 35 / 2, 35 / 2);
+            // Create circular clip
+            Circle clip = new Circle(17.5);
+            clip.setCenterX(17.5);
+            clip.setCenterY(17.5);
             imageView.setClip(clip);
+
+            // Create circular border
+            Circle border = new Circle(17.5);
+            border.setCenterX(17.5);
+            border.setCenterY(17.5);
+            border.setFill(null);
+            border.setStroke(Color.web("#e4e4e4"));
+            border.setStrokeWidth(1);
+
+            // Add image and border to container
+            avatarContainer.getChildren().addAll(imageView, border);
 
         } catch (Exception e) {
             System.out.println("Error loading avatar for " + friend.getUsername() + ": " + e.getMessage());
-            // Use default on error
             try {
                 imageView.setImage(new Image(getClass().getResource("/resouces/user.png").toExternalForm(), true));
+
+                // Create circular clip for default image
+                Circle clip = new Circle(17.5);
+                clip.setCenterX(17.5);
+                clip.setCenterY(17.5);
+                imageView.setClip(clip);
+
+                // Create circular border for default image
+                Circle border = new Circle(17.5);
+                border.setCenterX(17.5);
+                border.setCenterY(17.5);
+                border.setFill(null);
+                border.setStroke(Color.web("#e4e4e4"));
+                border.setStrokeWidth(1);
+
+                avatarContainer.getChildren().addAll(imageView, border);
             } catch (Exception ex) {
-                // Ignore if even this fails
+                avatarContainer.getChildren().add(imageView);
             }
         }
 
@@ -822,7 +856,7 @@ public class ChatSceneController implements Initializable {
         infoBox.setAlignment(Pos.CENTER_LEFT);
 
         // Add all elements to the contact box
-        contactBox.getChildren().addAll(imageView, infoBox);
+        contactBox.getChildren().addAll(avatarContainer, infoBox);
 
         return contactBox;
     }
@@ -844,35 +878,85 @@ public class ChatSceneController implements Initializable {
             }
 
             FXMLLoader fXMLLoader = new FXMLLoader(getClass().getResource("ChatBox.fxml"));
-            // Không set controller ở đây vì đã được chỉ định trong FXML
-            // fXMLLoader.setController(new ChatBoxController(friend));
 
             Tab tab = new Tab();
             tab.setId(friend);
-            tab.setText(friend);
 
             tab.setOnCloseRequest(new EventHandler<Event>() {
                 @Override
                 public void handle(Event event) {
                     tabsOpened.remove(friend);
-
-                    // Also remove the controller from our map
                     tabsControllers.remove(friend);
                 }
             });
 
             tab.setContent(fXMLLoader.load());
 
+            // Create tab header with avatar and username
+            HBox tabHeader = new HBox(5);
+            tabHeader.setAlignment(Pos.CENTER_LEFT);
+            tabHeader.setPadding(new Insets(2, 5, 2, 5));
+
+            // Create and configure avatar
+            ImageView avatar = new ImageView();
+            avatar.setFitWidth(20);
+            avatar.setFitHeight(20);
+            avatar.setPreserveRatio(false);
+            avatar.setSmooth(true);
+            avatar.setCache(false);
+
+            try {
+                User user = clinetView.getUser(friend);
+                if (user != null && user.getImage() != null && !user.getImage().trim().isEmpty()) {
+                    String imagePath = user.getImage();
+                    if (imagePath.startsWith("http")) {
+                        String separator = imagePath.contains("?") ? "&" : "?";
+                        imagePath += separator + "t=" + System.currentTimeMillis();
+                    }
+                    avatar.setImage(new Image(imagePath));
+                } else {
+                    String defaultPath = (user != null && user.getGender() != null &&
+                            user.getGender().equalsIgnoreCase("Female")) ? "/resouces/female.png"
+                                    : "/resouces/user.png";
+                    avatar.setImage(new Image(getClass().getResource(defaultPath).toExternalForm() +
+                            "?t=" + System.currentTimeMillis()));
+                }
+
+                // Make avatar circular
+                Circle clip = new Circle(10);
+                clip.setCenterX(10);
+                clip.setCenterY(10);
+                avatar.setClip(clip);
+
+            } catch (Exception e) {
+                System.out.println("Error loading avatar: " + e.getMessage());
+                try {
+                    avatar.setImage(new Image(getClass().getResource("/resouces/user.png").toExternalForm()));
+                    Circle clip = new Circle(10);
+                    clip.setCenterX(10);
+                    clip.setCenterY(10);
+                    avatar.setClip(clip);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+
+            // Create username label
+            Label usernameLabel = new Label(friend);
+            usernameLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #333333;");
+
+            // Add components to header
+            tabHeader.getChildren().addAll(avatar, usernameLabel);
+            tab.setGraphic(tabHeader);
+
             tabPane.getTabs().add(tab);
             tabPane.getSelectionModel().select(tab);
             tabsOpened.put(friend, tab);
 
             ChatBoxController controller = fXMLLoader.getController();
-            // Đặt receiver cho controller sau khi đã load
             controller.setReceiver(friend);
             tabsControllers.put(friend, controller);
 
-            // Store scroll position for later restoration
             tab.setOnSelectionChanged(e -> {
                 if (tab.isSelected()) {
                     Platform.runLater(() -> {
@@ -881,56 +965,6 @@ public class ChatSceneController implements Initializable {
                 }
             });
 
-            try {
-                // Try to get user's custom avatar first
-                User user = clinetView.getUser(friend);
-
-                // Create a horizontal box for the tab header
-                HBox tabHeader = new HBox(5);
-                tabHeader.setAlignment(Pos.CENTER_LEFT);
-
-                // Create and configure the avatar image view
-                ImageView iv = new ImageView();
-                iv.setFitHeight(16);
-                iv.setFitWidth(16);
-                iv.setPreserveRatio(true);
-                iv.setCache(false);
-
-                // Get appropriate avatar image
-                if (user != null && user.getImage() != null && !user.getImage().trim().isEmpty()) {
-                    // Use custom avatar
-                    String imagePath = user.getImage();
-                    if (imagePath.startsWith("http")) {
-                        String separator = imagePath.contains("?") ? "&" : "?";
-                        imagePath += separator + "t=" + System.currentTimeMillis();
-                    }
-                    iv.setImage(new Image(imagePath, 16, 16, true, true));
-                } else {
-                    // Use default avatar based on gender if available
-                    String genderPath = (user != null && user.getGender() != null &&
-                            user.getGender().equalsIgnoreCase("Female"))
-                                    ? "/resouces/female.png"
-                                    : "/resouces/user.png";
-                    iv.setImage(new Image(getClass().getResource(genderPath).openStream(), 16, 16, true, true));
-                }
-
-                // Make avatar circular
-                Circle clip = new Circle(8, 8, 8);
-                iv.setClip(clip);
-
-                // Create label for username
-                Label nameLabel = new Label(friend);
-                nameLabel.setStyle("-fx-font-size: 12;");
-
-                // Add components to tab header
-                tabHeader.getChildren().addAll(iv, nameLabel);
-
-                // Set the tab header
-                tab.setGraphic(tabHeader);
-            } catch (Exception e) {
-                e.printStackTrace();
-                System.out.println("Error setting tab graphic: " + e.getMessage());
-            }
         } catch (IOException ex) {
             ex.printStackTrace();
         }
@@ -958,12 +992,6 @@ public class ChatSceneController implements Initializable {
             clinetView.showError("Error", "Profile Load Error", "Failed to load profile update screen.");
         }
     }
-
-    @FXML
-    private TextField txtFieldGlobalSearch;
-
-    @FXML
-    private TextField txtFieldSearch;
 
     @FXML
     private Button btnProfile;
@@ -1343,79 +1371,59 @@ public class ChatSceneController implements Initializable {
      */
     private void updateUserProfileImage(User user) {
         if (imgUser != null && user != null) {
-            // Load image with cache busting
-            try {
-                if (user.getImage() != null && !user.getImage().isEmpty()) {
-                    // Add timestamp to force reload
-                    String imagePath = user.getImage();
-                    if (imagePath.startsWith("http")) {
-                        String separator = imagePath.contains("?") ? "&" : "?";
-                        imagePath = imagePath + separator + "t=" + System.currentTimeMillis();
-                    }
-                    imgUser.setImage(new Image(imagePath, true));
-                } else {
-                    // Set default avatar based on gender
-                    String defaultImage = user.getGender().equals("male") ? "/resouces/male.png"
-                            : "/resouces/female.png";
-                    imgUser.setImage(new Image(defaultImage + "?t=" + System.currentTimeMillis(), true));
-                }
+            // Configure ImageView
+            imgUser.setFitWidth(35);
+            imgUser.setFitHeight(35);
+            imgUser.setPreserveRatio(false);
+            imgUser.setSmooth(true);
+            imgUser.setCache(false);
 
-                // Make avatar circular
-                if (imgUser.getClip() == null) {
-                    Circle clip = new Circle(imgUser.getFitWidth() / 2, imgUser.getFitHeight() / 2,
-                            Math.min(imgUser.getFitWidth(), imgUser.getFitHeight()) / 2);
-                    imgUser.setClip(clip);
+            // Load with timestamp to force refresh
+            if (user.getImage() != null && !user.getImage().trim().isEmpty()) {
+                String imagePath = user.getImage();
+                if (imagePath.startsWith("http")) {
+                    String separator = imagePath.contains("?") ? "&" : "?";
+                    imagePath = imagePath + separator + "t=" + System.currentTimeMillis();
                 }
-            } catch (Exception ex) {
-                ex.printStackTrace();
+                Image img = new Image(imagePath, 35, 35, true, false);
+                imgUser.setImage(img);
+            } else {
+                // Use default image based on gender
+                String defaultPath = "/resouces/" +
+                        (user.getGender() != null &&
+                                user.getGender().equalsIgnoreCase("Female") ? "female.png" : "male.png");
+                imgUser.setImage(new Image(getClass().getResource(defaultPath).toExternalForm() +
+                        "?t=" + System.currentTimeMillis(), 35, 35, true, false));
             }
+
+            // Create perfect circle clip
+            Circle clip = new Circle(17.5);
+            clip.setCenterX(17.5);
+            clip.setCenterY(17.5);
+            imgUser.setClip(clip);
+
+            // Create circular border
+            Circle border = new Circle(17.5);
+            border.setCenterX(17.5);
+            border.setCenterY(17.5);
+            border.setFill(null);
+            border.setStroke(Color.web("#ffffff"));
+            border.setStrokeWidth(2);
+
+            // Create container for avatar
+            StackPane avatarContainer = new StackPane();
+            avatarContainer.setPrefSize(35, 35);
+            avatarContainer.setMaxSize(35, 35);
+            avatarContainer.setMinSize(35, 35);
+
+            // Replace the old ImageView with the new container
+            if (imgUser.getParent() instanceof StackPane) {
+                StackPane parent = (StackPane) imgUser.getParent();
+                parent.getChildren().setAll(imgUser, border);
+            }
+
+            System.out.println("User profile image updated in header");
         }
-    }
-
-    /**
-     * Refreshes the user's profile image in the sidebar
-     */
-    public void refreshUserProfileImage() {
-        Platform.runLater(() -> {
-            try {
-                User currentUser = clinetView.getUserInformation();
-                if (currentUser != null && imgUser != null) {
-                    // Clear any image cache
-                    imgUser.setCache(false);
-
-                    // Load with timestamp to force refresh
-                    if (currentUser.getImage() != null && !currentUser.getImage().trim().isEmpty()) {
-                        String imagePath = currentUser.getImage();
-                        // Add cache busting parameter
-                        if (imagePath.startsWith("http")) {
-                            String separator = imagePath.contains("?") ? "&" : "?";
-                            imagePath = imagePath + separator + "t=" + System.currentTimeMillis();
-                        }
-                        Image img = new Image(imagePath);
-                        imgUser.setImage(img);
-                    } else {
-                        // Use default image based on gender
-                        String defaultPath = "/resouces/" +
-                                (currentUser.getGender() != null &&
-                                        currentUser.getGender().equalsIgnoreCase("Female") ? "female.png" : "male.png");
-                        imgUser.setImage(new Image(getClass().getResource(defaultPath).toExternalForm() +
-                                "?t=" + System.currentTimeMillis()));
-                    }
-
-                    // Make image circular if not already
-                    if (imgUser.getClip() == null) {
-                        Circle clip = new Circle(imgUser.getFitWidth() / 2, imgUser.getFitHeight() / 2,
-                                Math.min(imgUser.getFitWidth(), imgUser.getFitHeight()) / 2);
-                        imgUser.setClip(clip);
-                    }
-
-                    System.out.println("User profile image updated in header");
-                }
-            } catch (Exception ex) {
-                System.out.println("Error updating user profile image: " + ex.getMessage());
-                ex.printStackTrace();
-            }
-        });
     }
 
     /**
@@ -1624,23 +1632,16 @@ public class ChatSceneController implements Initializable {
             return;
         }
 
-        // Initialize ListViews if they're null
-        if (listViewContacts == null || listViewFamily == null) {
-            System.out.println("Initializing ListView fields for search functionality");
-            try {
-                // Create them programmatically if not found in FXML
-                if (listViewContacts == null) {
-                    listViewContacts = new ListView<>();
-                }
-                if (listViewFamily == null) {
-                    listViewFamily = new ListView<>();
-                }
-            } catch (Exception e) {
-                System.out.println("Error initializing ListViews: " + e.getMessage());
-                e.printStackTrace();
-                return;
-            }
-        }
+        // Thêm style cho ô tìm kiếm
+        txtFieldSearch.setStyle(
+                "-fx-background-color: #f0f2f5;" +
+                        "-fx-background-radius: 20;" +
+                        "-fx-padding: 8 12;" +
+                        "-fx-font-size: 13px;" +
+                        "-fx-prompt-text-fill: #65676b;" +
+                        "-fx-text-fill: #050505;" +
+                        "-fx-border-width: 0;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 4, 0, 0, 1);");
 
         // Thêm listener để bắt sự kiện khi người dùng gõ vào ô tìm kiếm
         txtFieldSearch.textProperty().addListener((observable, oldValue, newValue) -> {
@@ -1658,6 +1659,31 @@ public class ChatSceneController implements Initializable {
 
         // Đặt gợi ý cho ô tìm kiếm
         txtFieldSearch.setPromptText("Tìm kiếm bạn bè...");
+
+        // Thêm hiệu ứng focus
+        txtFieldSearch.focusedProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue) { // Khi focus
+                txtFieldSearch.setStyle(
+                        "-fx-background-color: #ffffff;" +
+                                "-fx-background-radius: 20;" +
+                                "-fx-padding: 8 12;" +
+                                "-fx-font-size: 13px;" +
+                                "-fx-prompt-text-fill: #65676b;" +
+                                "-fx-text-fill: #050505;" +
+                                "-fx-border-width: 0;" +
+                                "-fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.15), 8, 0, 0, 2);");
+            } else { // Khi mất focus
+                txtFieldSearch.setStyle(
+                        "-fx-background-color: #f0f2f5;" +
+                                "-fx-background-radius: 20;" +
+                                "-fx-padding: 8 12;" +
+                                "-fx-font-size: 13px;" +
+                                "-fx-prompt-text-fill: #65676b;" +
+                                "-fx-text-fill: #050505;" +
+                                "-fx-border-width: 0;" +
+                                "-fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 4, 0, 0, 1);");
+            }
+        });
     }
 
     /**
@@ -1667,12 +1693,6 @@ public class ChatSceneController implements Initializable {
      */
     private void filterContacts(String searchText) {
         try {
-            // Check if the ListView fields are null
-            if (listViewContacts == null || listViewFamily == null) {
-                System.out.println("Warning: ListView is null in filterContacts, skipping filter operation");
-                return;
-            }
-
             // Lấy danh sách liên hệ
             ArrayList<utilitez.Pair> contacts = clinetView.getContactsWithType();
 
@@ -1697,62 +1717,118 @@ public class ChatSceneController implements Initializable {
                 String username = user.getUsername().toLowerCase();
 
                 if (fullName.contains(searchText) || username.contains(searchText)) {
-                    // Tạo mục liên hệ
-                    Label contactNameLabel = new Label(user.getUsername());
-                    ImageView statusImageView = new ImageView();
+                    // Tạo mục liên hệ với giao diện đẹp hơn
+                    HBox contactBox = new HBox(10);
+                    contactBox.setAlignment(Pos.CENTER_LEFT);
+                    contactBox.setPadding(new Insets(8, 12, 8, 12));
+                    contactBox.setPrefWidth(225);
+                    contactBox.setStyle(
+                            "-fx-background-color: transparent;" +
+                                    "-fx-background-radius: 8;" +
+                                    "-fx-border-radius: 8");
 
-                    String status = user.getStatus();
-
-                    // Đặt hình ảnh trạng thái và kiểm tra null
-                    try {
-                        String imageResourcePath = null;
-                        switch (status) {
-                            case "offline":
-                                imageResourcePath = "/resouces/closed.png";
-                                break;
-                            case "online":
-                                imageResourcePath = "/resouces/open.png";
-                                break;
-                            case "busy":
-                                imageResourcePath = "/resouces/busy.png";
-                                break;
-                            default:
-                                imageResourcePath = "/resouces/closed.png";
-                                break;
-                        }
-
-                        // Kiểm tra URL trước khi sử dụng
-                        URL resourceUrl = getClass().getResource(imageResourcePath);
-                        if (resourceUrl != null) {
-                            statusImageView.setImage(new Image(resourceUrl.toExternalForm()));
-                        } else {
-                            System.out.println("Warning: Resource not found: " + imageResourcePath);
-                            // Sử dụng một hình ảnh mặc định hoặc tạo một hình ảnh nhỏ
-                            statusImageView.setImage(new Image(new ByteArrayInputStream(new byte[0])));
-                        }
-                    } catch (Exception e) {
-                        System.out.println("Error loading status image: " + e.getMessage());
-                        // Không làm gì nếu không thể tải hình ảnh
-                    }
-
-                    statusImageView.setFitWidth(8);
-                    statusImageView.setFitHeight(8);
-
-                    // Tạo container cho mục liên hệ
-                    HBox contactItem = new HBox(5);
-                    contactItem.getChildren().addAll(statusImageView, contactNameLabel);
-                    contactItem.setAlignment(Pos.CENTER_LEFT);
-
-                    // Thêm sự kiện click cho mục liên hệ
-                    contactItem.setOnMouseClicked((MouseEvent event) -> {
-                        cellClickAction(event, user.getUsername());
+                    // Thêm hiệu ứng hover
+                    contactBox.setOnMouseEntered(e -> {
+                        contactBox.setStyle(
+                                "-fx-background-color: #f0f2f5;" +
+                                        "-fx-background-radius: 8;" +
+                                        "-fx-border-radius: 8;" +
+                                        "-fx-cursor: hand");
+                    });
+                    contactBox.setOnMouseExited(e -> {
+                        contactBox.setStyle(
+                                "-fx-background-color: transparent;" +
+                                        "-fx-background-radius: 8;" +
+                                        "-fx-border-radius: 8");
                     });
 
-                    // Thêm vào danh sách phù hợp
+                    // Avatar container
+                    StackPane avatarContainer = new StackPane();
+                    avatarContainer.setPrefSize(40, 40);
+                    avatarContainer.setMaxSize(40, 40);
+                    avatarContainer.setMinSize(40, 40);
+
+                    // Avatar image
+                    ImageView avatar = new ImageView();
+                    avatar.setFitWidth(40);
+                    avatar.setFitHeight(40);
+                    avatar.setPreserveRatio(false);
+                    avatar.setSmooth(true);
+                    avatar.setCache(false);
+
+                    // Load avatar image
+                    try {
+                        if (user.getImage() != null && !user.getImage().trim().isEmpty()) {
+                            String imagePath = user.getImage() + "?t=" + System.currentTimeMillis();
+                            avatar.setImage(new Image(imagePath));
+                        } else {
+                            String defaultPath = user.getGender() != null &&
+                                    user.getGender().equalsIgnoreCase("Female") ? "/resouces/female.png"
+                                            : "/resouces/male.png";
+                            avatar.setImage(new Image(getClass().getResource(defaultPath).toExternalForm()));
+                        }
+
+                        // Make avatar circular
+                        Circle clip = new Circle(20);
+                        clip.setCenterX(20);
+                        clip.setCenterY(20);
+                        avatar.setClip(clip);
+
+                    } catch (Exception e) {
+                        System.out.println("Error loading avatar: " + e.getMessage());
+                        try {
+                            avatar.setImage(new Image(getClass().getResource("/resouces/user.png").toExternalForm()));
+                            Circle clip = new Circle(20);
+                            clip.setCenterX(20);
+                            clip.setCenterY(20);
+                            avatar.setClip(clip);
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                        }
+                    }
+
+                    avatarContainer.getChildren().add(avatar);
+
+                    // User info container
+                    VBox userInfo = new VBox(2);
+                    userInfo.setAlignment(Pos.CENTER_LEFT);
+
+                    // Username
+                    Label usernameLabel = new Label(user.getUsername());
+                    usernameLabel.setStyle(
+                            "-fx-font-weight: bold;" +
+                                    "-fx-text-fill: #050505;" +
+                                    "-fx-font-size: 14px");
+
+                    // Status
+                    Label statusLabel = new Label(user.getStatus());
+                    statusLabel.setStyle("-fx-font-size: 12px;");
+
+                    // Set status color
+                    switch (user.getStatus().toLowerCase()) {
+                        case "online":
+                            statusLabel.setStyle(statusLabel.getStyle() + "-fx-text-fill: #31a24c;");
+                            break;
+                        case "busy":
+                            statusLabel.setStyle(statusLabel.getStyle() + "-fx-text-fill: #e41e3f;");
+                            break;
+                        default:
+                            statusLabel.setStyle(statusLabel.getStyle() + "-fx-text-fill: #65676b;");
+                    }
+
+                    userInfo.getChildren().addAll(usernameLabel, statusLabel);
+
+                    // Add all components to contact box
+                    contactBox.getChildren().addAll(avatarContainer, userInfo);
+
+                    // Add click handler
+                    contactBox.setOnMouseClicked(event -> cellClickAction(event, user.getUsername()));
+
+                    // Add to appropriate list
                     if (type.equals("Family")) {
-                        listViewFamily.getItems().add(contactItem);
+                        listViewFamily.getItems().add(contactBox);
                     } else {
-                        listViewContacts.getItems().add(contactItem);
+                        listViewContacts.getItems().add(contactBox);
                     }
 
                     resultsCount++;
@@ -1761,18 +1837,92 @@ public class ChatSceneController implements Initializable {
 
             // Hiển thị thông báo nếu không tìm thấy kết quả
             if (resultsCount == 0) {
-                Label noResultsLabel = new Label("Không tìm thấy liên hệ");
-                noResultsLabel.setStyle("-fx-text-fill: gray;");
+                HBox noResultsBox = new HBox();
+                noResultsBox.setAlignment(Pos.CENTER);
+                noResultsBox.setPadding(new Insets(20));
+                noResultsBox.setPrefWidth(225);
+                noResultsBox.setStyle("-fx-background-color: transparent;");
 
-                HBox noResultsItem = new HBox();
-                noResultsItem.getChildren().add(noResultsLabel);
-                noResultsItem.setAlignment(Pos.CENTER);
+                Label noResultsLabel = new Label("Không tìm thấy kết quả phù hợp");
+                noResultsLabel.setStyle(
+                        "-fx-text-fill: #65676b;" +
+                                "-fx-font-size: 13px");
 
-                listViewContacts.getItems().add(noResultsItem);
+                noResultsBox.getChildren().add(noResultsLabel);
+                listViewContacts.getItems().add(noResultsBox);
             }
+
         } catch (Exception e) {
             System.out.println("Lỗi khi lọc danh bạ: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Refreshes the user's profile image in the header
+     */
+    public void refreshUserProfileImage() {
+        Platform.runLater(() -> {
+            try {
+                User currentUser = clinetView.getUserInformation();
+                if (currentUser != null && imgUser != null) {
+                    // Configure ImageView
+                    imgUser.setFitWidth(35);
+                    imgUser.setFitHeight(35);
+                    imgUser.setPreserveRatio(false);
+                    imgUser.setSmooth(true);
+                    imgUser.setCache(false);
+
+                    // Load with timestamp to force refresh
+                    if (currentUser.getImage() != null && !currentUser.getImage().trim().isEmpty()) {
+                        String imagePath = currentUser.getImage();
+                        if (imagePath.startsWith("http")) {
+                            String separator = imagePath.contains("?") ? "&" : "?";
+                            imagePath = imagePath + separator + "t=" + System.currentTimeMillis();
+                        }
+                        Image img = new Image(imagePath, 35, 35, true, false);
+                        imgUser.setImage(img);
+                    } else {
+                        // Use default image based on gender
+                        String defaultPath = "/resouces/" +
+                                (currentUser.getGender() != null &&
+                                        currentUser.getGender().equalsIgnoreCase("Female") ? "female.png" : "male.png");
+                        imgUser.setImage(new Image(getClass().getResource(defaultPath).toExternalForm() +
+                                "?t=" + System.currentTimeMillis(), 35, 35, true, false));
+                    }
+
+                    // Create perfect circle clip
+                    Circle clip = new Circle(17.5);
+                    clip.setCenterX(17.5);
+                    clip.setCenterY(17.5);
+                    imgUser.setClip(clip);
+
+                    // Create circular border
+                    Circle border = new Circle(17.5);
+                    border.setCenterX(17.5);
+                    border.setCenterY(17.5);
+                    border.setFill(null);
+                    border.setStroke(Color.web("#ffffff"));
+                    border.setStrokeWidth(2);
+
+                    // Create container for avatar
+                    StackPane avatarContainer = new StackPane();
+                    avatarContainer.setPrefSize(35, 35);
+                    avatarContainer.setMaxSize(35, 35);
+                    avatarContainer.setMinSize(35, 35);
+
+                    // Replace the old ImageView with the new container
+                    if (imgUser.getParent() instanceof StackPane) {
+                        StackPane parent = (StackPane) imgUser.getParent();
+                        parent.getChildren().setAll(imgUser, border);
+                    }
+
+                    System.out.println("User profile image updated in header");
+                }
+            } catch (Exception ex) {
+                System.out.println("Error updating user profile image: " + ex.getMessage());
+                ex.printStackTrace();
+            }
+        });
     }
 }

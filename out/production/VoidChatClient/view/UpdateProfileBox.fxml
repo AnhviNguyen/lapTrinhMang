@@ -12,8 +12,8 @@
   <VBox alignment="CENTER" style="-fx-background-color: #1877f2; -fx-padding: 25 0;">
     <StackPane>
       <!-- Profile Picture -->
-      <StackPane style="-fx-background-color: white; -fx-background-radius: 100; -fx-padding: 3; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 6, 0, 0, 0);" styleClass="profile-picture-container">
-        <ImageView fx:id="profileImage" fitHeight="120.0" fitWidth="120.0" pickOnBounds="true" preserveRatio="true">
+      <StackPane style="-fx-background-color: white; -fx-background-radius: 50%; -fx-padding: 2; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 6, 0, 0, 0);" styleClass="profile-picture-container">
+        <ImageView fx:id="profileImage" fitHeight="120.0" fitWidth="120.0" pickOnBounds="true" preserveRatio="true" style="-fx-background-color: transparent; -fx-border-color: #e4e4e4; -fx-border-width: 1; -fx-border-radius: 50%;">
           <image>
             <Image url="@../resouces/user.png" />
           </image>

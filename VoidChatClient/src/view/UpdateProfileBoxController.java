@@ -123,12 +123,12 @@ public class UpdateProfileBoxController implements Initializable {
                 profileImage.setClip(null);
 
                 // Xóa bỏ các hiệu ứng style, chỉ giữ border đơn giản
-                profileImage.setStyle("-fx-border-color: #cccccc; -fx-border-width: 1px;");
+                profileImage.setStyle("-fx-border-color: #cccccc; -fx-border-width: 1px; -fx-border-radius: 5;");
 
                 // Đặt lại style mặc định cho container ảnh
                 StackPane parent = (StackPane) profileImage.getParent();
                 if (parent != null) {
-                    parent.setStyle("-fx-background-color: white;");
+                    parent.setStyle("-fx-background-color: white; -fx-background-radius: 5;");
                 }
 
                 // Load the appropriate image based on availability
