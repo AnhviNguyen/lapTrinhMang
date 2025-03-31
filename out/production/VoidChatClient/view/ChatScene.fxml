@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="600.0" prefWidth="962.0" style="-fx-background-color: #f0f2f5;" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="view.ChatSceneController">
+  <!-- Top Bar -->
+  <!-- Left Sidebar -->
+  <!-- Main Chat Area -->
+  <center>
+    <TabPane fx:id="tabPane" style="-fx-background-color: white; -fx-tab-min-height: 30; -fx-tab-max-height: 30;">
+      <tabs>
+        <!-- Home Tab -->
+        <Tab fx:id="homeBox" closable="false" text="Home">
+          <graphic>
+            <ImageView fitHeight="14.0" fitWidth="14.0">
+              <image>
+                <Image url="@../resouces/home.png" />
+              </image>
+            </ImageView>
+          </graphic>
+          <!-- Tab content loaded dynamically in controller -->
+        </Tab>
+        <!-- Friend Requests Tab -->
+        <Tab fx:id="requestsTab" closable="false" text="Friend Requests">
+          <content>
+            <VBox spacing="12.0" style="-fx-padding: 16; -fx-background-color: white;">
+              <Label style="-fx-font-size: 16; -fx-font-weight: bold;" text="Friend Requests" />
+              <ListView fx:id="requestsListview" style="-fx-background-color: transparent;" VBox.vgrow="ALWAYS" />
+            </VBox>
+          </content>
+          <graphic>
+            <ImageView fitHeight="14.0" fitWidth="14.0">
+              <image>
+                <Image url="@../resouces/request.png" />
+              </image>
+            </ImageView>
+          </graphic>
+        </Tab>
+      </tabs>
+    </TabPane>
+  </center>
+  <left>
+    <VBox fx:id="leftPane" prefWidth="260.0" spacing="10.0" style="-fx-background-color: white; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 3, 0, 0, 0);">
+      <!-- Sidebar Header -->
+      <HBox alignment="CENTER_LEFT" spacing="8.0" style="-fx-padding: 12; -fx-border-color: #f0f2f5; -fx-border-width: 0 0 1 0;">
+        <Label style="-fx-font-size: 16; -fx-font-weight: bold;" text="Chats" />
+        <Region HBox.hgrow="ALWAYS" />
+      </HBox>
+      <!-- Search Friends -->
+      <HBox style="-fx-padding: 0 12;">
+        <TextField fx:id="txtFieldSearch" prefWidth="240.0" promptText="Search contacts" style="-fx-background-color: #f0f2f5; -fx-background-radius: 16; -fx-padding: 6 12;" />
+      </HBox>
+      <!-- Friends Accordion -->
+      <Accordion style="-fx-padding: 0 6;" VBox.vgrow="ALWAYS">
+        <panes>
+          <TitledPane fx:id="titlePaneFriends" expanded="false" style="-fx-font-weight: bold;" text="Friends">
+            <content>
+              <ListView fx:id="aListViewFriends" style="-fx-background-color: transparent; -fx-padding: 6;" />
+            </content>
+          </TitledPane>
+          <TitledPane fx:id="titlePaneFamily" style="-fx-font-weight: bold;" text="Family">
+            <content>
+              <ListView fx:id="aListViewFamily" style="-fx-background-color: transparent; -fx-padding: 6;" />
+            </content>
+          </TitledPane>
+        </panes>
+      </Accordion>
+      <!-- List views for contacts - hidden by default but available for the controller -->
+      <VBox managed="false" visible="false">
+        <ListView fx:id="listViewContacts" />
+        <ListView fx:id="listViewFamily" />
+      </VBox>
+      <!-- Bottom Actions -->
+      <HBox alignment="CENTER" spacing="8.0" style="-fx-padding: 12; -fx-border-color: #f0f2f5; -fx-border-width: 1 0 0 0;">
+        <Button fx:id="btnNewFriend" onAction="#btnNewFriendAction" style="-fx-background-color: #e7f3ff; -fx-text-fill: #1877f2; -fx-font-weight: bold; -fx-padding: 6 12; -fx-background-radius: 4;" text="Add Friend" />
+        <Button fx:id="btnCreateGroup" onAction="#btnCreateGroupAction" style="-fx-background-color: #e7f3ff; -fx-text-fill: #1877f2; -fx-font-weight: bold; -fx-padding: 6 12; -fx-background-radius: 4;" text="Create Group" />
+      </HBox>
+    </VBox>
+  </left>
+  <top>
+    <HBox alignment="CENTER_LEFT" style="-fx-background-color: #1877f2; -fx-padding: 6 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 3, 0, 0, 0);">
+      <ImageView fitHeight="28.0" preserveRatio="true">
+        <image>
+          <Image url="@../resouces/Voidlogo.png" />
+        </image>
+      </ImageView>
+      <!-- Spacer -->
+      <Region HBox.hgrow="ALWAYS" />
+      <!-- User Menu -->
+      <HBox alignment="CENTER_RIGHT" spacing="12.0">
+        <Button fx:id="btnProfile" onAction="#btnProfileAction" style="-fx-background-color: transparent;">
+          <graphic>
+            <HBox alignment="CENTER" spacing="6.0">
+              <ImageView fx:id="imgUser" fitHeight="24.0" fitWidth="24.0" pickOnBounds="true" preserveRatio="true">
+                <image>
+                  <Image url="@../resouces/user.png" />
+                </image>
+              </ImageView>
+              <Label fx:id="homeLabel" style="-fx-font-size: 12; -fx-font-weight: bold; -fx-text-fill: white;" text="Username" />
+            </HBox>
+          </graphic>
+        </Button>
+        <ComboBox fx:id="comboBoxStatus" prefWidth="100.0" style="-fx-background-color: rgba(255,255,255,0.2); -fx-background-radius: 4; -fx-text-fill: white;" />
+        <Button fx:id="btnLogout" onAction="#btnLogoutAction" style="-fx-background-color: rgba(255,255,255,0.2); -fx-text-fill: white; -fx-background-radius: 4;" text="Logout" />
+      </HBox>
+    </HBox>
+  </top>
+</BorderPane>

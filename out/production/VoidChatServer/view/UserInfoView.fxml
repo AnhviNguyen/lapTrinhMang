@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.text.Font?>
+<?import javafx.scene.text.Text?>
+
+<Pane id="userInfo" prefHeight="180.0" prefWidth="360.0" xmlns="http://javafx.com/javafx/8.0.111" xmlns:fx="http://javafx.com/fxml/1">
+    <children>
+        <ImageView fitHeight="100.0" fitWidth="60.0" layoutX="12.0" layoutY="20.0" pickOnBounds="true" preserveRatio="true">
+            <image>
+                <Image url="@../resources/user.png" />
+            </image>
+        </ImageView>
+        <Text id="lbUsername" fx:id="txtUserName" layoutX="110.0" layoutY="30.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Username " wrappingWidth="204.13671875">
+            <font>
+                <Font size="16.0" />
+            </font>
+        </Text>
+        <Text id="lbEmail" fx:id="txtEmail" layoutX="170.0" layoutY="55.0" strokeType="OUTSIDE" strokeWidth="0.0" text="email@email.com" wrappingWidth="170.13671635836363" />
+        <Text id="lbFullName" fx:id="txtFullName" layoutX="170.0" layoutY="75.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Full name " wrappingWidth="170.13671875" />
+        <Text id="lbCountry" fx:id="txtCountry" layoutX="170.0" layoutY="95.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Egypt" />
+        <Text id="lbGender" fx:id="txtGender" layoutX="170.0" layoutY="115.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Female" />
+        <Text id="lbStatus" fx:id="txtStatus" layoutX="170.0" layoutY="135.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Online" />
+        <Text layoutX="110.0" layoutY="55.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Email" />
+        <Text layoutX="110.0" layoutY="75.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Name" />
+        <Text layoutX="110.0" layoutY="95.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Country" />
+        <Text layoutX="110.0" layoutY="115.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Gender" />
+        <Text layoutX="110.0" layoutY="135.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Status" />
+    </children>
+</Pane>

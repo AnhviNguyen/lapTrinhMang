@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/VoidChatClient/VoidChatClient.iml" filepath="$PROJECT_DIR$/VoidChatClient/VoidChatClient.iml" />
+      <module fileurl="file://$PROJECT_DIR$/VoidChatServer/VoidChatServer.iml" filepath="$PROJECT_DIR$/VoidChatServer/VoidChatServer.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/voidChat-master.iml" filepath="$PROJECT_DIR$/.idea/voidChat-master.iml" />
+    </modules>
+  </component>
+</project>

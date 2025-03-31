@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox alignment="CENTER" spacing="10" xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml" fx:controller="view.UpdateUserSceneController">
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <Label text="Update Profile" style="-fx-font-size: 24px; -fx-font-weight: bold;"/>
+    
+    <HBox spacing="10" alignment="CENTER">
+        <VBox spacing="5">
+            <ImageView fx:id="imgUser" fitWidth="100" fitHeight="100" preserveRatio="true"/>
+            <Button fx:id="btnSelectImage" text="Select Image" onAction="#btnSelectImageAction"/>
+        </VBox>
+    </HBox>
+
+    <GridPane vgap="10" hgap="10">
+        <Label text="Email:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <TextField fx:id="txtFieldEmail" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+        <Label text="First Name:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+        <TextField fx:id="txtFieldFname" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+        <Label text="Last Name:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+        <TextField fx:id="txtFieldLname" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+        <Label text="Gender:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+        <ComboBox fx:id="comboBoxGender" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+
+        <Label text="Country:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+        <ComboBox fx:id="comboBoxCountry" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+    </GridPane>
+
+    <HBox spacing="10" alignment="CENTER">
+        <Button fx:id="btnUpdate" text="Update" onAction="#btnUpdateAction"/>
+        <Button fx:id="btnCancel" text="Cancel" onAction="#btnCancelAction"/>
+    </HBox>
+</VBox> 

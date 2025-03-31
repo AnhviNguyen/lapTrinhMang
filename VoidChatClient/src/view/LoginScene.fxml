@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.geometry.Insets?>
+
+<AnchorPane id="AnchorPane" prefHeight="500.0" prefWidth="800.0" style="-fx-background-color: #f0f2f5;" xmlns="http://javafx.com/javafx/8.0.111" xmlns:fx="http://javafx.com/fxml/1" fx:controller="view.LoginSceneController">
+    <children>
+        <HBox alignment="CENTER" spacing="60" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+            <!-- Left Side - Logo and Tagline -->
+            <VBox alignment="CENTER_LEFT" prefWidth="340">
+                <ImageView fitWidth="200" preserveRatio="true">
+                    <image>
+                        <Image url="@../resouces/Voidlogo.png"/>
+                    </image>
+                </ImageView>
+                <Label text="Connect with friends and the world around you on VoidChat." 
+                       style="-fx-font-size: 18; -fx-text-fill: #1c1e21;" wrapText="true"/>
+            </VBox>
+            
+            <!-- Right Side - Login Form -->
+            <VBox spacing="12" maxWidth="320">
+                <!-- Login Card -->
+                <VBox spacing="12" style="-fx-background-color: white; -fx-padding: 16; -fx-background-radius: 6; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 6, 0, 0, 0);">
+                    <!-- Username Field -->
+                    <TextField fx:id="txtUserName" promptText="Username" 
+                             style="-fx-background-color: #f0f2f5; -fx-padding: 10; -fx-background-radius: 4; -fx-font-size: 13;"/>
+                    
+                    <!-- Password Field -->
+                    <PasswordField fx:id="txtPassword" promptText="Password"
+                                 style="-fx-background-color: #f0f2f5; -fx-padding: 10; -fx-background-radius: 4; -fx-font-size: 13;"/>
+                    
+                    <!-- Login Button -->
+                    <HBox alignment="CENTER">
+                        <Button fx:id="btnLogin" onAction="#btnLoginAction" text="Log In"
+                                style="-fx-background-color: #1877f2; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10; -fx-background-radius: 4; -fx-font-size: 14; "/>
+                    </HBox>
+
+                    
+                    <!-- Forgot Password -->
+                    <Hyperlink text="Forgot Password?" style="-fx-text-fill: #1877f2; -fx-font-size: 12;" alignment="CENTER"/>
+                    
+                    <Separator/>
+                    
+                    <!-- Create Account Button -->
+                    <HBox alignment="CENTER">
+                        <Button fx:id="btnSignup" onAction="#linkCreatAccountAction" text="Create New Account" 
+                                style="-fx-background-color: #42b72a; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 16; -fx-background-radius: 4; -fx-font-size: 13;"/>
+                    </HBox>
+                </VBox>
+                
+                <!-- Create a Page Link -->
+                <HBox alignment="CENTER" style="-fx-padding: 12 0;">
+                    <Label text="Create a Page" style="-fx-font-weight: bold; -fx-text-fill: #1c1e21; -fx-font-size: 12;"/>
+                    <Label text=" for a celebrity, brand or business." style="-fx-text-fill: #1c1e21; -fx-font-size: 12;"/>
+                </HBox>
+            </VBox>
+        </HBox>
+    </children>
+</AnchorPane>

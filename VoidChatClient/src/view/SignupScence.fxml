@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.Insets?>
+
+<AnchorPane id="AnchorPane" prefHeight="500.0" prefWidth="800.0" style="-fx-background-color: #f0f2f5;" xmlns="http://javafx.com/javafx/8.0.111" xmlns:fx="http://javafx.com/fxml/1" fx:controller="view.SignupScenceController">
+    <children>
+        <VBox alignment="CENTER" spacing="16" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+            <!-- Signup Card -->
+            <VBox maxWidth="360" spacing="12" style="-fx-background-color: white; -fx-padding: 16; -fx-background-radius: 6; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 6, 0, 0, 0);">
+                <!-- Header -->
+                <VBox spacing="3">
+                    <Label text="Sign Up" style="-fx-font-size: 24; -fx-font-weight: bold; -fx-text-fill: #1c1e21;"/>
+                    <Label text="It's quick and easy." style="-fx-font-size: 13; -fx-text-fill: #606770;"/>
+                </VBox>
+                
+                <Separator/>
+                
+                <!-- Name Fields -->
+                <HBox spacing="8">
+                    <TextField fx:id="txtFName" promptText="First name" prefWidth="176" 
+                             style="-fx-background-color: #f0f2f5; -fx-padding: 8; -fx-background-radius: 4;"/>
+                    <TextField fx:id="txtLName" promptText="Last name" prefWidth="176"
+                             style="-fx-background-color: #f0f2f5; -fx-padding: 8; -fx-background-radius: 4;"/>
+                </HBox>
+                
+                <!-- Username -->
+                <TextField fx:id="txtUserName" promptText="Username" 
+                         style="-fx-background-color: #f0f2f5; -fx-padding: 8; -fx-background-radius: 4;"/>
+                
+                <!-- Email -->
+                <TextField fx:id="txtEmail" promptText="Email" 
+                         style="-fx-background-color: #f0f2f5; -fx-padding: 8; -fx-background-radius: 4;"/>
+                
+                <!-- Password -->
+                <PasswordField fx:id="txtPassword" promptText="New password"
+                             style="-fx-background-color: #f0f2f5; -fx-padding: 8; -fx-background-radius: 4;"/>
+                
+                <!-- Gender -->
+                <VBox spacing="3">
+                    <Label text="Gender" style="-fx-font-weight: bold; -fx-text-fill: #606770; -fx-font-size: 12;"/>
+                    <ComboBox fx:id="comboboxGender" prefWidth="160" promptText="Select gender"
+                             style="-fx-background-color: #f0f2f5; -fx-padding: 6; -fx-background-radius: 4;"/>
+                </VBox>
+                
+                <!-- Country -->
+                <VBox spacing="3">
+                    <Label text="Country" style="-fx-font-weight: bold; -fx-text-fill: #606770; -fx-font-size: 12;"/>
+                    <ComboBox fx:id="comboboxCountry" prefWidth="160" promptText="Select country"
+                             style="-fx-background-color: #f0f2f5; -fx-padding: 6; -fx-background-radius: 4;"/>
+                </VBox>
+                
+                <!-- Terms -->
+                <Label text="By clicking Sign Up, you agree to our Terms, Data Policy and Cookie Policy." 
+                       style="-fx-font-size: 10; -fx-text-fill: #606770;" wrapText="true"/>
+                
+                <!-- Sign Up Button -->
+                <HBox alignment="CENTER">
+                    <Button fx:id="btnSignup" onAction="#btnSignupAction" text="Sign Up" 
+                            style="-fx-background-color: #00a400; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 40; -fx-background-radius: 4; -fx-font-size: 14;"/>
+                </HBox>
+                
+                <!-- Login Link -->
+                <HBox alignment="CENTER">
+                    <Hyperlink fx:id="linkLogin" onAction="#btnLoginAction" text="Already have an account?"
+                              style="-fx-text-fill: #1877f2; -fx-font-size: 12;"/>
+                </HBox>
+            </VBox>
+        </VBox>
+    </children>
+</AnchorPane>

@@ -1,0 +1,1778 @@
+package view;
+
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
+import java.rmi.RemoteException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.ResourceBundle;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javafx.application.Platform;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
+import javafx.event.Event;
+import javafx.event.EventHandler;
+import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.fxml.Initializable;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.control.Accordion;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ListView;
+import javafx.scene.control.MenuButton;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
+import javafx.scene.control.TextField;
+import javafx.scene.control.TitledPane;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.paint.Paint;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
+import javafx.util.Pair;
+import model.Message;
+import model.User;
+import tray.animations.AnimationType;
+import tray.notification.TrayNotification;
+import utilitez.Constant;
+import utilitez.Notification;
+
+/**
+ * FXML Controller class
+ *
+ * @author Merna
+ */
+public class ChatSceneController implements Initializable {
+
+    @FXML
+    private ImageView imgUser;
+    @FXML
+    private Label homeLabel;
+    @FXML
+    private ListView<String> requestsListview;
+    @FXML
+    private Tab requestsTab;
+    @FXML
+    private Tab homeBox;
+    @FXML
+    private TabPane tabPane;
+    @FXML
+    private ComboBox comboBoxStatus;
+    @FXML
+    private VBox leftPane;
+    // -----merna-----
+    @FXML
+    private TitledPane titlePaneFriends;
+
+    @FXML
+    private ListView<User> aListViewFriends;
+
+    @FXML
+    private TitledPane titlePaneFamily;
+
+    @FXML
+    private ListView<User> aListViewFamily;
+    // ------end merna----
+
+    @FXML
+    private Label serverStatusLabel;
+
+    private static boolean falg = false;
+
+    Map<String, Tab> tabsOpened = new HashMap<>();
+    Map<String, ChatBoxController> tabsControllers = new HashMap<>();
+
+    ObservableList<String> statusList = FXCollections.observableArrayList("online", "offline", "busy");
+
+    private ClientView clinetView;
+
+    @FXML
+    private ListView<HBox> listViewContacts;
+    @FXML
+    private ListView<HBox> listViewFamily;
+
+    public ChatSceneController() {
+        // get instance form view
+        clinetView = ClientView.getInstance();
+        clinetView.setChatSceneController(this);
+    }
+
+    @Override
+    public void initialize(URL url, ResourceBundle rb) {
+        updatePageInfo();
+        comboBoxStatus.setItems(statusList);
+
+        try {
+            homeBox.setContent(FXMLLoader.load(getClass().getResource("HomeBox.fxml")));
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+
+        updateFriendsRequests();
+
+        // Don't create new ListViews - they are already injected from FXML
+        loadAccordionData();
+
+        // Initialize server status label
+        ClientView.getInstance().serverStatusLabel = serverStatusLabel;
+
+        // Thiết lập chức năng tìm kiếm cho chỉ khi ListView đã được khởi tạo
+        setupSearchField();
+
+        try {
+            // Check if ListView fields are null, if so, initialize them with the accordion
+            // ones
+            if (listViewContacts == null || listViewFamily == null) {
+                System.out.println("ListView contacts or family is null, initializing using alternative methods");
+                // Wait until loadAccordionData finishes before refreshing contacts
+                loadAccordionData();
+                // Don't call refreshContacts here to avoid the NullPointerException
+                return;
+            }
+
+            // Only refresh contacts if the ListView fields are not null
+            refreshContacts();
+        } catch (Exception e) {
+            System.out.println("Error during initialization: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    @FXML
+    private void btnLogoutAction(ActionEvent event) {
+        ((Node) (event.getSource())).getScene().getWindow().hide();
+        clinetView.getMainStage().show();
+        clinetView.logout();
+        clinetView.changeStatus("offline");
+    }
+
+    @FXML
+    private void iconLogoutAction(MouseEvent event) {
+        ((Node) (event.getSource())).getScene().getWindow().hide();
+        clinetView.getMainStage().show();
+        clinetView.logout();
+        clinetView.changeStatus("offline");
+    }
+
+    @FXML
+    private void iconCreateGroupAction(MouseEvent event) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("GroupScene.fxml"));
+            Parent parent = loader.load();
+            Stage stage = new Stage();
+            Scene scene = new Scene(parent);
+            stage.setScene(scene);
+            stage.setTitle("Create New Group");
+            stage.show();
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    @FXML
+    private void btnCreateGroupAction(ActionEvent event) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("GroupScene.fxml"));
+            Parent parent = loader.load();
+            Stage stage = new Stage();
+            Scene scene = new Scene(parent);
+            stage.setScene(scene);
+            stage.setTitle("Create New Group");
+            stage.show();
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    @FXML
+    private void btnNewFriendAction(ActionEvent event) {
+        // Call the existing implementation with a null MouseEvent
+        iconAddNewFriendAction(null);
+    }
+
+    public void updatePageInfo() {
+        User user = clinetView.getUserInformation();
+        homeLabel.setText(user.getUsername());
+        comboBoxStatus.setValue("online");
+
+        // Update user avatar in the header
+        refreshUserProfileImage();
+    }
+
+    /**
+     * update Friends request from Database
+     */
+    public void updateFriendsRequests() {
+        Platform.runLater(() -> {
+
+            ArrayList<String> requestsArrayList = clinetView.checkRequest();
+
+            if (requestsArrayList != null) {
+                requestsTab.setDisable(false);
+                ObservableList<String> requestsList = FXCollections.observableArrayList(requestsArrayList);
+                requestsListview.setItems(requestsList);
+                requestsListview.setCellFactory(listView -> new ListCell<String>() {
+
+                    Button btnAccept = new Button();
+                    Button btnIgnore = new Button();
+
+                    @Override
+                    public void updateItem(String name, boolean empty) {
+                        super.updateItem(name, empty);
+
+                        if (empty || name == null) {
+                            setText(null);
+                            setGraphic(null);
+                        } else {
+
+                            BorderPane pane = new BorderPane();
+
+                            Label labelRequestFrom = new Label();
+                            labelRequestFrom.setText(name);
+
+                            btnAccept.setGraphic(new ImageView(new Image("/resouces/accept.png", 9, 9, false, false)));
+                            btnAccept.setOnAction(new EventHandler<ActionEvent>() {
+                                @Override
+                                public void handle(ActionEvent event) {
+                                    if (clinetView.acceptRequest(getItem())) {
+                                        clinetView.showSuccess("Operation Sccuess",
+                                                "Friend Added Successfuly",
+                                                "you now become friend with " + getItem());
+
+                                        // update requests
+                                        updateFriendsRequests();
+
+                                        // update list of friends
+                                        loadAccordionData();
+                                    } else {
+                                        clinetView.showError("Error", "you can't add friend right now \n"
+                                                + "please try again later ..", "");
+                                    }
+                                }
+                            });
+                            btnIgnore.setGraphic(new ImageView(new Image("/resouces/ignore.png", 9, 9, false, false)));
+                            btnIgnore.setOnAction(new EventHandler<ActionEvent>() {
+                                @Override
+                                public void handle(ActionEvent event) {
+                                    clinetView.ignoreRequest(getItem());
+                                    updateFriendsRequests();
+                                }
+                            });
+
+                            HBox btnHbox = new HBox();
+
+                            btnHbox.getChildren().addAll(btnIgnore, btnAccept);
+                            btnHbox.setSpacing(3);
+                            pane.setRight(btnHbox);
+                            pane.setLeft(labelRequestFrom);
+                            setGraphic(pane);
+
+                        }
+                    }
+                });
+            } else {
+                requestsTab.setDisable(true);
+            }
+        });
+    }
+
+    public void notify(String message, int type) {
+        try {
+
+            switch (type) {
+                case Notification.FRIEND_REQUSET:
+                    showNotifaction("Friend Request", message,
+                            new Image(getClass().getResource("/resouces/add-contact.png").openStream()));
+                    updateFriendsRequests();
+                    break;
+                case Notification.FRIEND_OFFLINE:
+                    showNotifaction("Friend Become offline", message,
+                            new Image(getClass().getResource("/resouces/closed.png").openStream()));
+                    // updateContactsList();
+                    loadAccordionData();
+                    break;
+                case Notification.FRIEND_ONLINE:
+                    showNotifaction("Friend Become online", message,
+                            new Image(getClass().getResource("/resouces/open.png").openStream()));
+                    // updateContactsList();
+                    loadAccordionData();
+                    break;
+                case Notification.ACCEPT_FRIEND_REQUEST:
+                    showNotifaction("Accept Request", message,
+                            new Image(getClass().getResource("/resouces/accept.png").openStream()));
+                    // updateContactsList();
+                    loadAccordionData();
+                    break;
+                case Notification.SERVER_MESSAGE:
+                    showNotifaction("New Announcement", message,
+                            new Image(getClass().getResource("/resouces/megaphone.png").openStream()));
+                    break;
+                case Notification.FRIEND_BUSY:
+                    // showNotifaction("Friend Become busy", message, new
+                    // Image(getClass().getResource("../resouces/add-contact.png").openStream()));
+                    // updateContactsList();
+                    loadAccordionData();
+
+            }
+
+            // TODO change image to require image
+        } catch (IOException ex) {
+            Logger.getLogger(ChatSceneController.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+    }
+
+    private void showNotifaction(String title, String message, Image image) {
+        Platform.runLater(() -> {
+            TrayNotification tray = new TrayNotification();
+            tray.setTitle(title);
+            tray.setMessage(message);
+            tray.setRectangleFill(Paint.valueOf("#bdc3c7"));
+            tray.setAnimationType(AnimationType.POPUP);
+            tray.setImage(image);
+            tray.showAndWait();
+        });
+    }
+
+    public void changeStatus() {
+        clinetView.changeStatus(comboBoxStatus.getValue().toString());
+    }
+
+    /**
+     * get message from clientView and open existing tab or create new tab and
+     * load new chatBoxScene on it
+     *
+     * @param message
+     * @throws java.io.IOException
+     */
+    public void reciveMsg(Message message) throws IOException {
+
+        String tabName;
+        String[] groupName = message.getTo().split("##");
+
+        // message sent to group? open tab (group name) : open tab(sender name)
+        if (message.getTo().contains("##")) {
+            tabName = message.getTo();
+        } else {
+            tabName = message.getFrom();
+        }
+
+        Platform.runLater(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (!tabsOpened.containsKey(tabName)) {
+
+                        // create new tab
+                        Tab newTab = new Tab();
+                        newTab.setId(tabName);
+
+                        if (message.getTo().contains("##")) {
+                            newTab.setText(groupName[2]);
+                        } else {
+                            newTab.setText(tabName);
+                        }
+
+                        // Add icon for tab
+                        try {
+                            ImageView iv = new ImageView(
+                                    new Image(getClass().getResource("/resouces/user.png").openStream()));
+                            iv.setFitHeight(20);
+                            iv.setFitWidth(20);
+                            newTab.setGraphic(iv);
+                        } catch (IOException ex) {
+                            ex.printStackTrace();
+                        }
+
+                        newTab.setOnCloseRequest(new EventHandler<Event>() {
+                            @Override
+                            public void handle(Event event) {
+                                tabsOpened.remove(newTab.getId());
+                                tabsControllers.remove(newTab.getId());
+                            }
+                        });
+
+                        tabPane.getTabs().add(newTab);
+                        tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.ALL_TABS);
+
+                        // load new chat box
+                        FXMLLoader loader = new FXMLLoader(getClass().getResource("ChatBox.fxml"));
+                        ChatBoxController chatBoxController = new ChatBoxController(message);
+                        loader.setController(chatBoxController);
+                        newTab.setContent(loader.load());
+                        chatBoxController.reciveMsg(message);
+
+                        // put the new tab and controller in the map
+                        tabsOpened.put(tabName, newTab);
+                        tabsControllers.put(tabName, chatBoxController);
+
+                    } else {
+                        // tab already exist so open it and pass msg to its controller
+                        tabPane.getSelectionModel().select(tabsOpened.get(tabName));
+                        tabsControllers.get(tabName).reciveMsg(message);
+                    }
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+            }
+        });
+    }
+
+    public void createGroup(String groupName) {
+        String[] splitString = groupName.split("##");
+
+        Platform.runLater(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (!tabsOpened.containsKey(groupName)) {
+                        // Create new tab
+                        Tab newTab = new Tab();
+                        newTab.setId(groupName);
+                        newTab.setText(splitString[2]);
+                        newTab.setClosable(true);
+
+                        // Add icon for tab
+                        try {
+                            ImageView iv = new ImageView(
+                                    new Image(getClass().getResource("/resouces/group.png").openStream()));
+                            iv.setFitHeight(20);
+                            iv.setFitWidth(20);
+                            newTab.setGraphic(iv);
+                        } catch (IOException ex) {
+                            ex.printStackTrace();
+                        }
+
+                        // Add close handler
+                        newTab.setOnCloseRequest(new EventHandler<Event>() {
+                            @Override
+                            public void handle(Event event) {
+                                tabsOpened.remove(newTab.getId());
+                                tabsControllers.remove(newTab.getId());
+                            }
+                        });
+
+                        // Load ChatBox for this group
+                        FXMLLoader loader = new FXMLLoader(getClass().getResource("ChatBox.fxml"));
+                        Message message = new Message();
+                        message.setTo(groupName);
+                        ChatBoxController chatBoxController = new ChatBoxController(message);
+                        loader.setController(chatBoxController);
+
+                        // Set content and store references
+                        newTab.setContent(loader.load());
+                        tabsOpened.put(groupName, newTab);
+                        tabsControllers.put(groupName, chatBoxController);
+
+                        // Add to tabPane and select
+                        tabPane.getTabs().add(newTab);
+                        tabPane.getSelectionModel().select(newTab);
+                    } else {
+                        // Tab already exists, just select it
+                        tabPane.getSelectionModel().select(tabsOpened.get(groupName));
+                    }
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+            }
+        });
+    }
+
+    public String getSaveLocation(String sender, String filename) {
+        try {
+
+            FutureTask saveLocation = new FutureTask(() -> {
+
+                Alert alert = new Alert(AlertType.CONFIRMATION);
+                alert.setTitle("Recieve File ");
+                alert.setHeaderText(sender + " send file to you .. ");
+                alert.setContentText("Do you want to download file ?");
+
+                Optional<ButtonType> result = alert.showAndWait();
+                if (result.get() == ButtonType.OK) {
+                    FileChooser fileChooser = new FileChooser();
+                    fileChooser.setInitialFileName(filename);
+                    // Show save file dialog
+                    File file = fileChooser.showSaveDialog(null);
+
+                    return (file != null) ? file.getAbsolutePath() : null;
+                } else {
+                    return null;
+                }
+
+            });
+
+            Platform.runLater(saveLocation);
+
+            return (String) saveLocation.get();
+        } catch (InterruptedException ex) {
+            ex.printStackTrace();
+        } catch (ExecutionException ex) {
+            ex.printStackTrace();
+        }
+        return null;
+    }
+
+    public void loadErrorServer() {
+        // ----- close this scene -----
+        Platform.runLater(new Runnable() {
+            @Override
+            public void run() {
+                // requestsListview.getScene().getWindow().hide();
+                if (!falg) {
+                    homeLabel.getScene().getWindow().hide();
+
+                    try {
+                        Parent parent = FXMLLoader.load(getClass().getResource("OutOfServiceScene.fxml"));
+                        Stage stage = new Stage();
+                        Scene scene = new Scene(parent);
+                        stage.setScene(scene);
+                        stage.setResizable(false);
+                        stage.setTitle(" ");
+                        stage.show();
+                        stage.setOnCloseRequest((WindowEvent ew) -> {
+                            Platform.exit();
+                            // TODO : why not close
+                            System.exit(0);
+                        });
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+                    falg = true;
+                }
+            }
+        });
+
+    }
+
+    @FXML
+    void iconAddNewFriendAction(MouseEvent event) {
+
+        ObservableList<String> options = FXCollections.observableArrayList(
+                "Family",
+                "Friends",
+                "Block");
+
+        Dialog<Pair<String, String>> dialog = new Dialog<>();
+        dialog.setTitle("Add New Friend");
+
+        ButtonType addButtonType = new ButtonType("Add", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(addButtonType, ButtonType.CANCEL);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new javafx.geometry.Insets(20, 150, 10, 10));
+
+        TextField txtFieldUserName = new TextField();
+        txtFieldUserName.setPromptText("username");
+
+        ComboBox comboBox = new ComboBox(options);
+        comboBox.getSelectionModel().selectFirst();
+
+        grid.add(new Label("User Name :"), 0, 0);
+        grid.add(txtFieldUserName, 1, 0);
+
+        grid.add(new Label("Category:"), 0, 1);
+        grid.add(comboBox, 1, 1);
+
+        // dialog.getDialogPane().setStyle(" -fx-background-color: #535f85;");
+        dialog.getDialogPane().setContent(grid);
+
+        // Request focus on the txtFieldEmail field by default.
+        Platform.runLater(() -> txtFieldUserName.requestFocus());
+
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == addButtonType) {
+                return new Pair<>(txtFieldUserName.getText(),
+                        comboBox.getSelectionModel().getSelectedItem().toString());
+            }
+            return null;
+        });
+
+        // Hna H3mal Insert LL Code Bta3e (Send Request)
+        Optional<Pair<String, String>> result = dialog.showAndWait();
+        result.ifPresent(emailCategory -> {
+
+            if (emailCategory.getValue().equals("Block")) {
+                clinetView.sendRequest(emailCategory.getKey(), emailCategory.getValue());
+                clinetView.showSuccess("Sccuess", "Blocked", "You block user " + emailCategory.getKey());
+                return;
+            }
+
+            switch (clinetView.sendRequest(emailCategory.getKey(), emailCategory.getValue())) {
+                case Constant.ALREADY_FRIENDS:
+                    clinetView.showError("Error", "Can't  Send Requset", "User Already Friend to you..");
+                    break;
+                case Constant.REQUEST_ALREADY_EXIST:
+                    clinetView.showError("Error", "Can't  Send Requset", "you Already send request before "
+                            + "\nor have request from this person\nor there is a block relation :( ");
+                    break;
+                case Constant.USER_NOT_EXIST:
+                    clinetView.showError("Error", "Can't  Send Requset", "User Not Exsist in our System");
+                    break;
+                case Constant.EXCEPTION:
+                    clinetView.showError("Error", "Can't  Send Requset", "An error Occure please Contact Admin");
+                    break;
+                case Constant.SENDED:
+                    clinetView.showSuccess("Sccuess", "Requset Sended",
+                            "You send request to " + emailCategory.getKey());
+                    break;
+                case Constant.SAME_NAME:
+                    clinetView.showError("Error", "Can't  Send Requset", "you can't add your self");
+                    break;
+            }
+
+        });
+    }
+
+    // --- merna ---
+    /**
+     * update friends contact list
+     */
+    void loadAccordionData() {
+        Platform.runLater(() -> {
+            ArrayList<utilitez.Pair> allContact = clinetView.getContactsWithType();
+
+            if (allContact != null) {
+                ObservableList<User> friendsList = FXCollections.observableArrayList();
+                ObservableList<User> familyList = FXCollections.observableArrayList();
+
+                for (utilitez.Pair contact : allContact) {
+                    User user = (User) contact.getFirst();
+                    String type = (String) contact.getSecond();
+
+                    if ("Family".equals(type)) {
+                        familyList.add(user);
+                    } else {
+                        friendsList.add(user);
+                    }
+                }
+
+                if (friendsList.isEmpty()) {
+                    try {
+                        Node node = FXMLLoader.load(getClass().getResource("EmptyList.fxml"));
+                        titlePaneFriends.setContent(node);
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+                } else {
+                    titlePaneFriends.setContent(aListViewFriends);
+                    aListViewFriends.setItems(friendsList);
+                }
+
+                if (familyList.isEmpty()) {
+                    try {
+                        Node node = FXMLLoader.load(getClass().getResource("EmptyList.fxml"));
+                        titlePaneFamily.setContent(node);
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+                } else {
+                    titlePaneFamily.setContent(aListViewFamily);
+                    aListViewFamily.setItems(familyList);
+                }
+
+                // Set cell factories
+                aListViewFriends.setCellFactory(listView -> new ListCell<User>() {
+                    @Override
+                    protected void updateItem(User friend, boolean empty) {
+                        super.updateItem(friend, empty);
+                        if (empty || friend == null) {
+                            setText(null);
+                            setGraphic(null);
+                        } else {
+                            setGraphic(loadCell(friend));
+                        }
+                    }
+                });
+
+                aListViewFamily.setCellFactory(listView -> new ListCell<User>() {
+                    @Override
+                    protected void updateItem(User friend, boolean empty) {
+                        super.updateItem(friend, empty);
+                        if (empty || friend == null) {
+                            setText(null);
+                            setGraphic(null);
+                        } else {
+                            setGraphic(loadCell(friend));
+                        }
+                    }
+                });
+
+                // Add click handlers
+                aListViewFriends.setOnMouseClicked(event -> {
+                    User selectedUser = aListViewFriends.getSelectionModel().getSelectedItem();
+                    if (selectedUser != null) {
+                        cellClickAction(event, selectedUser.getUsername());
+                    }
+                });
+
+                aListViewFamily.setOnMouseClicked(event -> {
+                    User selectedUser = aListViewFamily.getSelectionModel().getSelectedItem();
+                    if (selectedUser != null) {
+                        cellClickAction(event, selectedUser.getUsername());
+                    }
+                });
+            }
+        });
+    }
+
+    private HBox loadCell(User friend) {
+        HBox contactBox = new HBox(10);
+        contactBox.setAlignment(Pos.CENTER_LEFT);
+        contactBox.setPadding(new Insets(5, 5, 5, 5));
+        contactBox.setPrefHeight(40);
+        contactBox.setStyle("-fx-background-color: #f2f2f2; -fx-background-radius: 5;");
+
+        // Add avatar with proper sizing
+        ImageView imageView = new ImageView();
+        imageView.setFitWidth(35);
+        imageView.setFitHeight(35);
+        imageView.setPreserveRatio(true);
+        imageView.setCache(false); // Disable caching to ensure fresh image
+
+        try {
+            // Check if user has a custom avatar
+            if (friend.getImage() != null && !friend.getImage().trim().isEmpty()) {
+                // Load custom avatar with cache busting using timestamp
+                String imagePath = friend.getImage();
+                if (imagePath.startsWith("http")) {
+                    String separator = imagePath.contains("?") ? "&" : "?";
+                    // Always use current time for cache busting
+                    imagePath += separator + "t=" + System.currentTimeMillis();
+                }
+                Image avatar = new Image(imagePath, 35, 35, true, false);
+                imageView.setImage(avatar);
+                System.out.println("Loaded custom avatar for: " + friend.getUsername());
+            } else {
+                // Load default avatar based on gender
+                String defaultPath = friend.getGender() != null &&
+                        friend.getGender().equalsIgnoreCase("Female") ? "/resouces/female.png" : "/resouces/user.png";
+
+                // Add timestamp for cache busting
+                String fullPath = getClass().getResource(defaultPath).toExternalForm() +
+                        "?t=" + System.currentTimeMillis();
+
+                imageView.setImage(new Image(fullPath, true));
+            }
+
+            // Make avatar circular
+            Circle clip = new Circle(35 / 2, 35 / 2, 35 / 2);
+            imageView.setClip(clip);
+
+        } catch (Exception e) {
+            System.out.println("Error loading avatar for " + friend.getUsername() + ": " + e.getMessage());
+            // Use default on error
+            try {
+                imageView.setImage(new Image(getClass().getResource("/resouces/user.png").toExternalForm(), true));
+            } catch (Exception ex) {
+                // Ignore if even this fails
+            }
+        }
+
+        // Add name and status text
+        VBox infoBox = new VBox(2);
+        Label nameLabel = new Label(friend.getUsername());
+        nameLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #333333;");
+
+        Label statusLabel = new Label(friend.getStatus());
+        // Adjust style based on status
+        if (friend.getStatus().equalsIgnoreCase("online")) {
+            statusLabel.setStyle("-fx-text-fill: #2e7d32; -fx-font-size: 11;");
+        } else if (friend.getStatus().equalsIgnoreCase("busy")) {
+            statusLabel.setStyle("-fx-text-fill: #c62828; -fx-font-size: 11;");
+        } else {
+            statusLabel.setStyle("-fx-text-fill: #616161; -fx-font-size: 11;");
+        }
+
+        infoBox.getChildren().addAll(nameLabel, statusLabel);
+        infoBox.setAlignment(Pos.CENTER_LEFT);
+
+        // Add all elements to the contact box
+        contactBox.getChildren().addAll(imageView, infoBox);
+
+        return contactBox;
+    }
+
+    /**
+     * Action for clicking on a friend in the contacts list
+     * Opens a new chat tab for the selected friend
+     * 
+     * @param event  - Mouse click event
+     * @param friend - Selected friend name
+     */
+    @FXML
+    private void cellClickAction(MouseEvent event, String friend) {
+        System.out.println(">> ChatSceneController: cell click action for " + friend);
+        try {
+            if (tabsOpened.containsKey(friend)) {
+                tabPane.getSelectionModel().select(tabsOpened.get(friend));
+                return;
+            }
+
+            FXMLLoader fXMLLoader = new FXMLLoader(getClass().getResource("ChatBox.fxml"));
+            // Không set controller ở đây vì đã được chỉ định trong FXML
+            // fXMLLoader.setController(new ChatBoxController(friend));
+
+            Tab tab = new Tab();
+            tab.setId(friend);
+            tab.setText(friend);
+
+            tab.setOnCloseRequest(new EventHandler<Event>() {
+                @Override
+                public void handle(Event event) {
+                    tabsOpened.remove(friend);
+
+                    // Also remove the controller from our map
+                    tabsControllers.remove(friend);
+                }
+            });
+
+            tab.setContent(fXMLLoader.load());
+
+            tabPane.getTabs().add(tab);
+            tabPane.getSelectionModel().select(tab);
+            tabsOpened.put(friend, tab);
+
+            ChatBoxController controller = fXMLLoader.getController();
+            // Đặt receiver cho controller sau khi đã load
+            controller.setReceiver(friend);
+            tabsControllers.put(friend, controller);
+
+            // Store scroll position for later restoration
+            tab.setOnSelectionChanged(e -> {
+                if (tab.isSelected()) {
+                    Platform.runLater(() -> {
+                        controller.enforceConsistentMessageLayout();
+                    });
+                }
+            });
+
+            try {
+                // Try to get user's custom avatar first
+                User user = clinetView.getUser(friend);
+
+                // Create a horizontal box for the tab header
+                HBox tabHeader = new HBox(5);
+                tabHeader.setAlignment(Pos.CENTER_LEFT);
+
+                // Create and configure the avatar image view
+                ImageView iv = new ImageView();
+                iv.setFitHeight(16);
+                iv.setFitWidth(16);
+                iv.setPreserveRatio(true);
+                iv.setCache(false);
+
+                // Get appropriate avatar image
+                if (user != null && user.getImage() != null && !user.getImage().trim().isEmpty()) {
+                    // Use custom avatar
+                    String imagePath = user.getImage();
+                    if (imagePath.startsWith("http")) {
+                        String separator = imagePath.contains("?") ? "&" : "?";
+                        imagePath += separator + "t=" + System.currentTimeMillis();
+                    }
+                    iv.setImage(new Image(imagePath, 16, 16, true, true));
+                } else {
+                    // Use default avatar based on gender if available
+                    String genderPath = (user != null && user.getGender() != null &&
+                            user.getGender().equalsIgnoreCase("Female"))
+                                    ? "/resouces/female.png"
+                                    : "/resouces/user.png";
+                    iv.setImage(new Image(getClass().getResource(genderPath).openStream(), 16, 16, true, true));
+                }
+
+                // Make avatar circular
+                Circle clip = new Circle(8, 8, 8);
+                iv.setClip(clip);
+
+                // Create label for username
+                Label nameLabel = new Label(friend);
+                nameLabel.setStyle("-fx-font-size: 12;");
+
+                // Add components to tab header
+                tabHeader.getChildren().addAll(iv, nameLabel);
+
+                // Set the tab header
+                tab.setGraphic(tabHeader);
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.out.println("Error setting tab graphic: " + e.getMessage());
+            }
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+    // -- end merna ---
+
+    // friendsPane.getChildren().clear();
+    // friendsPane.getChildren().add(FXMLLoader.load(getClass().getResource("EmptyList.fxml")));
+
+    @FXML
+    private void btnProfileAction(ActionEvent event) {
+        try {
+            // Load the update profile content into the home tab
+            Tab selectedTab = tabPane.getSelectionModel().getSelectedItem();
+            if (selectedTab != homeBox) {
+                tabPane.getSelectionModel().select(homeBox);
+            }
+
+            // Load the UpdateProfileBox.fxml
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("UpdateProfileBox.fxml"));
+            Parent updateProfileRoot = loader.load();
+            homeBox.setContent(updateProfileRoot);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+            clinetView.showError("Error", "Profile Load Error", "Failed to load profile update screen.");
+        }
+    }
+
+    @FXML
+    private TextField txtFieldGlobalSearch;
+
+    @FXML
+    private TextField txtFieldSearch;
+
+    @FXML
+    private Button btnProfile;
+
+    @FXML
+    private Button btnNewChat;
+
+    /**
+     * Load the home scene content
+     */
+    public void loadHomeScene() {
+        try {
+            // Select the home tab
+            tabPane.getSelectionModel().select(homeBox);
+
+            // Load the HomeBox.fxml content
+            homeBox.setContent(FXMLLoader.load(getClass().getResource("HomeBox.fxml")));
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public void createChatBoxFXML(String friendName) {
+        System.out.println(">> ChatSceneController: create chat box for friend: " + friendName);
+        try {
+            // if this friend is already opened return
+            if (tabsOpened.containsKey(friendName)) {
+                tabPane.getSelectionModel().select(tabsOpened.get(friendName));
+                return;
+            }
+
+            // create the tab
+            Tab newTab = new Tab(friendName);
+
+            // load chat box - không chỉ định controller ở đây vì đã chỉ định trong FXML
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("ChatBox.fxml"));
+            final Parent parentChatBox = loader.load();
+
+            // controller for chat box - lấy controller đã được tạo tự động từ FXML
+            ChatBoxController chatBoxController = loader.getController();
+            chatBoxController.setChatSceneController(this);
+            chatBoxController.init(friendName); // initialize chat box controller
+
+            tabsControllers.put(friendName, chatBoxController);
+
+            // add the loaded chat box to the tab
+            newTab.setContent(parentChatBox);
+
+            // prevent tab from being closed
+            newTab.setClosable(true);
+
+            // set icon image for tab
+            ImageView img = new ImageView(new Image(getClass().getResource("/resouces/user.png").openStream()));
+            img.setFitWidth(14);
+            img.setFitHeight(14);
+            newTab.setGraphic(img);
+
+            // add the new tab
+            tabPane.getTabs().add(newTab);
+            tabsOpened.put(friendName, newTab);
+
+            // select the new tab
+            tabPane.getSelectionModel().select(newTab);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public void refreshContacts() {
+        // Check if the ListView fields are null
+        if (listViewContacts == null || listViewFamily == null) {
+            System.out.println("Warning: ListView is null in refreshContacts, skipping refresh operation");
+            return;
+        }
+
+        ArrayList<utilitez.Pair> contacts = clinetView.getContactsWithType();
+        if (contacts != null) {
+            try {
+                // Clear existing contacts
+                listViewContacts.getItems().clear();
+                listViewFamily.getItems().clear();
+
+                for (utilitez.Pair contact : contacts) {
+                    User user = (User) contact.getFirst();
+                    String type = (String) contact.getSecond();
+
+                    // Create contact box
+                    HBox contactBox = new HBox(10);
+                    contactBox.setAlignment(Pos.CENTER_LEFT);
+                    contactBox.setPadding(new Insets(5, 5, 5, 5));
+                    contactBox.setPrefWidth(225);
+
+                    // Set click action to open chat
+                    String username = user.getUsername();
+                    contactBox.setOnMouseClicked(event -> cellClickAction(event, username));
+
+                    // Add avatar with cache busting
+                    ImageView avatar = new ImageView();
+                    avatar.setFitWidth(40);
+                    avatar.setFitHeight(40);
+                    avatar.setPreserveRatio(true);
+                    avatar.setCache(false); // Important: disable caching
+
+                    try {
+                        if (user.getImage() != null && !user.getImage().trim().isEmpty()) {
+                            // Add timestamp for cache busting
+                            String imagePath = user.getImage();
+                            if (imagePath.startsWith("http")) {
+                                String separator = imagePath.contains("?") ? "&" : "?";
+                                imagePath += separator + "t=" + System.currentTimeMillis();
+                            }
+                            avatar.setImage(new Image(imagePath, true));
+                        } else {
+                            // Use default image based on gender with timestamp
+                            String defaultImage = (user.getGender() != null &&
+                                    user.getGender().equalsIgnoreCase("Female")) ? "/resouces/female.png"
+                                            : "/resouces/male.png";
+
+                            String fullPath = getClass().getResource(defaultImage).toExternalForm() +
+                                    "?t=" + System.currentTimeMillis();
+
+                            avatar.setImage(new Image(fullPath, true));
+                        }
+
+                        // Make avatar circular
+                        Circle clip = new Circle(20, 20, 20);
+                        avatar.setClip(clip);
+                    } catch (Exception e) {
+                        System.out
+                                .println("Error loading contact avatar for " + user.getUsername() + ": "
+                                        + e.getMessage());
+                        try {
+                            // Load default as fallback
+                            avatar.setImage(new Image(getClass().getResource("/resouces/user.png").toExternalForm() +
+                                    "?t=" + System.currentTimeMillis()));
+                        } catch (Exception ex) {
+                            System.out.println("Failed to load fallback avatar");
+                        }
+                    }
+
+                    // Create status indicator
+                    Circle statusCircle = new Circle(5);
+                    String status = clinetView.getStatus(user.getUsername());
+                    if ("online".equals(status)) {
+                        statusCircle.setFill(Color.GREEN);
+                    } else if ("busy".equals(status)) {
+                        statusCircle.setFill(Color.RED);
+                    } else {
+                        statusCircle.setFill(Color.GRAY);
+                    }
+
+                    ImageView statusView = new ImageView();
+                    statusView.setFitWidth(10);
+                    statusView.setFitHeight(10);
+                    StackPane statusPane = new StackPane(statusCircle);
+                    statusPane.setTranslateX(-10);
+                    statusPane.setTranslateY(15);
+
+                    // Add name and status in a VBox
+                    VBox infoBox = new VBox(2);
+                    Label nameLabel = new Label(user.getUsername());
+                    nameLabel.setStyle("-fx-font-weight: bold;");
+
+                    Label statusLabel = new Label(status);
+                    statusLabel.setStyle("-fx-text-fill: #65676b; -fx-font-size: 11;");
+
+                    infoBox.getChildren().addAll(nameLabel, statusLabel);
+
+                    // Create container for avatar and status indicator
+                    StackPane avatarPane = new StackPane();
+                    avatarPane.getChildren().addAll(avatar, statusPane);
+
+                    // Add components to contact box
+                    contactBox.getChildren().addAll(avatarPane, infoBox);
+
+                    // Add contact to appropriate list based on type
+                    if ("Family".equalsIgnoreCase(type)) {
+                        listViewFamily.getItems().add(contactBox);
+                    } else {
+                        listViewContacts.getItems().add(contactBox);
+                    }
+                }
+
+                System.out.println("Refreshed contact lists with " + contacts.size() + " contacts");
+            } catch (Exception e) {
+                System.out.println("Error in refreshContacts: " + e.getMessage());
+                e.printStackTrace();
+            }
+        } else {
+            System.out.println("No contacts to display or error fetching contacts");
+        }
+    }
+
+    public void openChatBox(String username) {
+        try {
+            if (!tabsOpened.containsKey(username)) {
+                Tab newTab = new Tab(username);
+                newTab.setClosable(true);
+
+                // Add icon
+                ImageView iv = new ImageView(new Image(getClass().getResource("/resouces/user.png").openStream()));
+                iv.setFitHeight(20);
+                iv.setFitWidth(20);
+                newTab.setGraphic(iv);
+
+                // Add close handler
+                newTab.setOnCloseRequest(event -> {
+                    tabsOpened.remove(newTab.getId());
+                    tabsControllers.remove(newTab.getId());
+                });
+
+                // Load chat box
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("ChatBox.fxml"));
+                ChatBoxController chatBoxController = new ChatBoxController(username);
+                loader.setController(chatBoxController);
+
+                newTab.setContent(loader.load());
+                tabsOpened.put(username, newTab);
+                tabsControllers.put(username, chatBoxController);
+
+                tabPane.getTabs().add(newTab);
+                tabPane.getSelectionModel().select(newTab);
+            } else {
+                tabPane.getSelectionModel().select(tabsOpened.get(username));
+            }
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    /**
+     * Refresh avatar for a specific user in all contact lists
+     * 
+     * @param username The username whose avatar needs updating
+     */
+    public void refreshContactAvatar(String username) {
+        Platform.runLater(() -> {
+            try {
+                // Get fresh user data
+                User updatedUser = clinetView.getUser(username);
+                if (updatedUser == null)
+                    return;
+
+                // Refresh in open tabs if available
+                if (tabsControllers.containsKey(username)) {
+                    ChatBoxController controller = tabsControllers.get(username);
+                    controller.refreshUserAvatar(username);
+                }
+
+                // Refresh tab icons if this user has an open tab
+                refreshTabAvatar(username);
+
+                // Force contact list to reload with new avatars
+                refreshContacts();
+
+                // Refresh user profile image if it's the current user
+                if (username.equals(clinetView.getUserInformation().getUsername())) {
+                    updateUserProfileImage(updatedUser);
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        });
+    }
+
+    /**
+     * Refreshes the avatar shown in tab headers for a specific user
+     * 
+     * @param username The username whose tab avatar needs updating
+     */
+    public void refreshTabAvatar(String username) {
+        try {
+            System.out.println("Refreshing tab avatars for: " + username);
+
+            // Update all tabs that need the user's avatar
+            for (Tab tab : tabPane.getTabs()) {
+                // Skip home and requests tabs
+                if (tab == homeBox || tab == requestsTab) {
+                    continue;
+                }
+
+                String tabId = tab.getId();
+                if (tabId == null) {
+                    tabId = tab.getText();
+                }
+
+                // Check if this tab belongs to a friend chat
+                boolean isUserTab = (tabId != null && tabId.equals(username));
+
+                // If it's the user's tab, update the avatar
+                if (isUserTab) {
+                    System.out.println("Found tab for user: " + username);
+
+                    // Get updated user info
+                    User user = clinetView.getUser(username);
+                    if (user == null) {
+                        System.out.println("User info not found for: " + username);
+                        continue;
+                    }
+
+                    // Load the appropriate image
+                    Image avatarImage = null;
+
+                    // Try to use user's custom image first
+                    if (user.getImage() != null && !user.getImage().trim().isEmpty()) {
+                        try {
+                            // Add cache busting parameter
+                            String imagePath = user.getImage();
+                            if (imagePath.startsWith("http")) {
+                                String separator = imagePath.contains("?") ? "&" : "?";
+                                imagePath = imagePath + separator + "t=" + System.currentTimeMillis();
+                            }
+                            avatarImage = new Image(imagePath, 20, 20, true, true);
+                            System.out.println("Loaded custom image for tab");
+                        } catch (Exception e) {
+                            System.out.println("Error loading user avatar for tab: " + e.getMessage());
+                        }
+                    }
+
+                    // Fallback to default if user image failed or wasn't set
+                    if (avatarImage == null) {
+                        try {
+                            String genderImage = (user.getGender() != null &&
+                                    user.getGender().equalsIgnoreCase("Female")) ? "/resouces/female.png"
+                                            : "/resouces/user.png";
+
+                            avatarImage = new Image(getClass().getResource(genderImage).toExternalForm() +
+                                    "?t=" + System.currentTimeMillis(), 20, 20, true, true);
+                            System.out.println("Loaded default image for tab");
+                        } catch (Exception e) {
+                            System.out.println("Error loading default avatar for tab: " + e.getMessage());
+                        }
+                    }
+
+                    // Apply the image to the tab
+                    if (avatarImage != null) {
+                        ImageView iv = new ImageView(avatarImage);
+                        iv.setFitHeight(20);
+                        iv.setFitWidth(20);
+                        tab.setGraphic(iv);
+                        System.out.println("Updated tab avatar for: " + username);
+                    }
+                }
+            }
+
+            // Special handling for current user's tabs in other people's lists
+            // This ensures avatars are properly refreshed even when the tab belongs to
+            // someone else
+            // but needs to show the current user's avatar
+            String currentUsername = clinetView.getUserInformation().getUsername();
+            if (username.equals(currentUsername)) {
+                System.out.println("Current user updated their avatar, refreshing all tabs");
+
+                // Update the user's avatar in all tabs
+                for (String tabName : tabsOpened.keySet()) {
+                    // Skip if this is a group tab
+                    if (tabName.contains("##")) {
+                        continue;
+                    }
+
+                    ChatBoxController chatController = tabsControllers.get(tabName);
+                    if (chatController != null) {
+                        chatController.refreshCurrentUserAvatar();
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            System.out.println("Error refreshing tab avatar: " + ex.getMessage());
+            ex.printStackTrace();
+        }
+    }
+
+    /**
+     * Updates the current user's profile image in the UI
+     * 
+     * @param user The user whose image needs updating
+     */
+    private void updateUserProfileImage(User user) {
+        if (imgUser != null && user != null) {
+            // Load image with cache busting
+            try {
+                if (user.getImage() != null && !user.getImage().isEmpty()) {
+                    // Add timestamp to force reload
+                    String imagePath = user.getImage();
+                    if (imagePath.startsWith("http")) {
+                        String separator = imagePath.contains("?") ? "&" : "?";
+                        imagePath = imagePath + separator + "t=" + System.currentTimeMillis();
+                    }
+                    imgUser.setImage(new Image(imagePath, true));
+                } else {
+                    // Set default avatar based on gender
+                    String defaultImage = user.getGender().equals("male") ? "/resouces/male.png"
+                            : "/resouces/female.png";
+                    imgUser.setImage(new Image(defaultImage + "?t=" + System.currentTimeMillis(), true));
+                }
+
+                // Make avatar circular
+                if (imgUser.getClip() == null) {
+                    Circle clip = new Circle(imgUser.getFitWidth() / 2, imgUser.getFitHeight() / 2,
+                            Math.min(imgUser.getFitWidth(), imgUser.getFitHeight()) / 2);
+                    imgUser.setClip(clip);
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * Refreshes the user's profile image in the sidebar
+     */
+    public void refreshUserProfileImage() {
+        Platform.runLater(() -> {
+            try {
+                User currentUser = clinetView.getUserInformation();
+                if (currentUser != null && imgUser != null) {
+                    // Clear any image cache
+                    imgUser.setCache(false);
+
+                    // Load with timestamp to force refresh
+                    if (currentUser.getImage() != null && !currentUser.getImage().trim().isEmpty()) {
+                        String imagePath = currentUser.getImage();
+                        // Add cache busting parameter
+                        if (imagePath.startsWith("http")) {
+                            String separator = imagePath.contains("?") ? "&" : "?";
+                            imagePath = imagePath + separator + "t=" + System.currentTimeMillis();
+                        }
+                        Image img = new Image(imagePath);
+                        imgUser.setImage(img);
+                    } else {
+                        // Use default image based on gender
+                        String defaultPath = "/resouces/" +
+                                (currentUser.getGender() != null &&
+                                        currentUser.getGender().equalsIgnoreCase("Female") ? "female.png" : "male.png");
+                        imgUser.setImage(new Image(getClass().getResource(defaultPath).toExternalForm() +
+                                "?t=" + System.currentTimeMillis()));
+                    }
+
+                    // Make image circular if not already
+                    if (imgUser.getClip() == null) {
+                        Circle clip = new Circle(imgUser.getFitWidth() / 2, imgUser.getFitHeight() / 2,
+                                Math.min(imgUser.getFitWidth(), imgUser.getFitHeight()) / 2);
+                        imgUser.setClip(clip);
+                    }
+
+                    System.out.println("User profile image updated in header");
+                }
+            } catch (Exception ex) {
+                System.out.println("Error updating user profile image: " + ex.getMessage());
+                ex.printStackTrace();
+            }
+        });
+    }
+
+    /**
+     * Updates the tab icon for the specified friend, ensuring avatar is fresh
+     * 
+     * @param friendName The username of the friend whose tab icon needs updating
+     */
+    public void updateFriendTabIcon(String friendName) {
+        Platform.runLater(() -> {
+            try {
+                // First check if we have a direct reference to the tab
+                if (tabsOpened.containsKey(friendName)) {
+                    Tab tab = tabsOpened.get(friendName);
+                    if (tab != null) {
+                        // Fetch user info
+                        User friend = clinetView.getUser(friendName);
+                        if (friend != null) {
+                            try {
+                                // Create a horizontal box for the tab header
+                                HBox tabHeader = new HBox(5);
+                                tabHeader.setAlignment(Pos.CENTER_LEFT);
+
+                                // Create and configure the avatar image view
+                                ImageView iv = new ImageView();
+                                iv.setFitHeight(16);
+                                iv.setFitWidth(16);
+                                iv.setPreserveRatio(true);
+                                iv.setCache(false);
+
+                                // Get appropriate avatar image
+                                if (friend.getImage() != null && !friend.getImage().trim().isEmpty()) {
+                                    String imagePath = friend.getImage() + "?t=" + System.currentTimeMillis();
+                                    iv.setImage(new Image(imagePath, 16, 16, true, false));
+                                } else {
+                                    String genderPath = friend.getGender() != null &&
+                                            friend.getGender().equalsIgnoreCase("Female") ? "/resouces/female.png"
+                                                    : "/resouces/user.png";
+
+                                    String fullPath = getClass().getResource(genderPath).toExternalForm() +
+                                            "?t=" + System.currentTimeMillis();
+
+                                    iv.setImage(new Image(fullPath, 16, 16, true, false));
+                                }
+
+                                // Make the avatar circular
+                                Circle clip = new Circle(8, 8, 8);
+                                iv.setClip(clip);
+
+                                // Create label for username
+                                Label nameLabel = new Label(friendName);
+                                nameLabel.setStyle("-fx-font-size: 12;");
+
+                                // Add components to tab header
+                                tabHeader.getChildren().addAll(iv, nameLabel);
+
+                                // Set the tab header
+                                tab.setGraphic(tabHeader);
+
+                                System.out.println("Updated tab icon via tabsOpened map");
+                            } catch (Exception ex) {
+                                System.out.println("Error updating tab icon from map: " + ex.getMessage());
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                System.out.println("Error in updateFriendTabIcon: " + e.getMessage());
+                e.printStackTrace();
+            }
+        });
+    }
+
+    /**
+     * Refreshes a friend's avatar in any open chat windows
+     * This is a convenience wrapper method for ClientView to use instead of
+     * directly accessing maps
+     * 
+     * @param username The username of the friend whose avatar needs refreshing
+     */
+    public void refreshFriendAvatar(String username) {
+        try {
+            // 1. Check if we have this user's controller in our map
+            if (tabsControllers.containsKey(username)) {
+                System.out.println("Found chat controller for " + username + ", refreshing avatar");
+                ChatBoxController controller = tabsControllers.get(username);
+                // Refresh the user's avatar in chat
+                controller.refreshUserAvatar(username);
+            }
+
+            // 2. Refresh all message bubbles in all chats that might contain this user's
+            // avatar
+            for (ChatBoxController controller : tabsControllers.values()) {
+                controller.refreshMessageAvatars(username);
+            }
+
+            System.out.println("Completed friend avatar refresh for: " + username);
+        } catch (Exception ex) {
+            System.out.println("Error in refreshFriendAvatar: " + ex.getMessage());
+            ex.printStackTrace();
+        }
+    }
+
+    /**
+     * Forces update of all avatars in the accordion panes (TitledPane components)
+     * specifically targeting the titlePaneFamily and titlePaneFriends components
+     */
+    public void refreshAccordionAvatars() {
+        Platform.runLater(() -> {
+            try {
+                System.out.println("Refreshing avatars in accordion panes (TitledPane)");
+
+                // Clear any image cache by removing and re-adding items
+                if (aListViewFriends != null) {
+                    // Store current items
+                    ObservableList<User> friendItems = aListViewFriends.getItems();
+                    if (friendItems != null && !friendItems.isEmpty()) {
+                        // Force refresh by resetting the items
+                        aListViewFriends.setItems(null);
+                        aListViewFriends.setItems(friendItems);
+                        aListViewFriends.refresh();
+                    }
+                }
+
+                if (aListViewFamily != null) {
+                    // Store current items
+                    ObservableList<User> familyItems = aListViewFamily.getItems();
+                    if (familyItems != null && !familyItems.isEmpty()) {
+                        // Force refresh by resetting the items
+                        aListViewFamily.setItems(null);
+                        aListViewFamily.setItems(familyItems);
+                        aListViewFamily.refresh();
+                    }
+                }
+
+                // Complete reload data in case the above refreshes aren't enough
+                loadAccordionData();
+
+                System.out.println("Accordion pane avatars refresh complete");
+            } catch (Exception e) {
+                System.out.println("Error refreshing accordion avatars: " + e.getMessage());
+                e.printStackTrace();
+            }
+        });
+    }
+
+    /**
+     * Comprehensive avatar refresh method that updates avatars everywhere in the UI
+     * This ensures that all instances of the given user's avatar are updated
+     * 
+     * @param username The username whose avatar needs updating
+     */
+    public void refreshAllAvatars(String username) {
+        Platform.runLater(() -> {
+            try {
+                System.out.println("Starting comprehensive avatar refresh for: " + username);
+
+                // 1. Update tab icons (highest priority)
+                updateFriendTabIcon(username);
+
+                // 2. Update avatars in chat boxes
+                if (tabsControllers.containsKey(username)) {
+                    ChatBoxController controller = tabsControllers.get(username);
+                    controller.refreshUserAvatar(username);
+                }
+
+                // Refresh all message bubbles that might contain this user's avatar
+                for (ChatBoxController controller : tabsControllers.values()) {
+                    controller.refreshMessageAvatars(username);
+                }
+
+                // 3. Update contact lists in the sidebar
+                refreshContacts();
+
+                // 4. Update the TitledPane lists (accordion)
+                refreshAccordionAvatars();
+
+                // 5. Update the user's profile image if it's the current user
+                if (username.equals(clinetView.getUserInformation().getUsername())) {
+                    refreshUserProfileImage();
+                }
+
+                // 6. Ensure tab headers are updated
+                refreshTabAvatar(username);
+
+                // 7. Force layout refresh to ensure changes are visible
+                if (tabPane != null) {
+                    double width = tabPane.getWidth();
+                    tabPane.setPrefWidth(width + 0.1);
+                    Platform.runLater(() -> tabPane.setPrefWidth(width));
+                }
+
+                System.out.println("Comprehensive avatar refresh complete for: " + username);
+            } catch (Exception e) {
+                System.out.println("Error in refreshAllAvatars: " + e.getMessage());
+                e.printStackTrace();
+            }
+        });
+    }
+
+    /**
+     * Thiết lập chức năng tìm kiếm cho TextField
+     */
+    private void setupSearchField() {
+        if (txtFieldSearch == null) {
+            System.out.println("Warning: txtFieldSearch is null, cannot setup search field");
+            return;
+        }
+
+        // Initialize ListViews if they're null
+        if (listViewContacts == null || listViewFamily == null) {
+            System.out.println("Initializing ListView fields for search functionality");
+            try {
+                // Create them programmatically if not found in FXML
+                if (listViewContacts == null) {
+                    listViewContacts = new ListView<>();
+                }
+                if (listViewFamily == null) {
+                    listViewFamily = new ListView<>();
+                }
+            } catch (Exception e) {
+                System.out.println("Error initializing ListViews: " + e.getMessage());
+                e.printStackTrace();
+                return;
+            }
+        }
+
+        // Thêm listener để bắt sự kiện khi người dùng gõ vào ô tìm kiếm
+        txtFieldSearch.textProperty().addListener((observable, oldValue, newValue) -> {
+            // Khi có thay đổi trong ô tìm kiếm, thực hiện tìm kiếm
+            String searchText = newValue.trim().toLowerCase();
+
+            if (searchText.isEmpty()) {
+                // Nếu ô tìm kiếm trống, hiển thị lại tất cả liên hệ
+                refreshContacts();
+            } else {
+                // Lọc danh sách liên hệ theo từ khóa tìm kiếm
+                filterContacts(searchText);
+            }
+        });
+
+        // Đặt gợi ý cho ô tìm kiếm
+        txtFieldSearch.setPromptText("Tìm kiếm bạn bè...");
+    }
+
+    /**
+     * Lọc danh sách liên hệ theo từ khóa tìm kiếm
+     * 
+     * @param searchText Từ khóa tìm kiếm
+     */
+    private void filterContacts(String searchText) {
+        try {
+            // Check if the ListView fields are null
+            if (listViewContacts == null || listViewFamily == null) {
+                System.out.println("Warning: ListView is null in filterContacts, skipping filter operation");
+                return;
+            }
+
+            // Lấy danh sách liên hệ
+            ArrayList<utilitez.Pair> contacts = clinetView.getContactsWithType();
+
+            if (contacts == null || contacts.isEmpty()) {
+                return;
+            }
+
+            // Xóa tất cả các mục hiện tại
+            listViewContacts.getItems().clear();
+            listViewFamily.getItems().clear();
+
+            // Đếm số kết quả tìm thấy
+            int resultsCount = 0;
+
+            // Lọc và hiển thị các liên hệ phù hợp
+            for (utilitez.Pair contact : contacts) {
+                User user = (User) contact.getFirst();
+                String type = (String) contact.getSecond();
+
+                // Tìm kiếm theo tên đầy đủ hoặc tên người dùng
+                String fullName = (user.getFname() + " " + user.getLname()).toLowerCase();
+                String username = user.getUsername().toLowerCase();
+
+                if (fullName.contains(searchText) || username.contains(searchText)) {
+                    // Tạo mục liên hệ
+                    Label contactNameLabel = new Label(user.getUsername());
+                    ImageView statusImageView = new ImageView();
+
+                    String status = user.getStatus();
+
+                    // Đặt hình ảnh trạng thái và kiểm tra null
+                    try {
+                        String imageResourcePath = null;
+                        switch (status) {
+                            case "offline":
+                                imageResourcePath = "/resouces/closed.png";
+                                break;
+                            case "online":
+                                imageResourcePath = "/resouces/open.png";
+                                break;
+                            case "busy":
+                                imageResourcePath = "/resouces/busy.png";
+                                break;
+                            default:
+                                imageResourcePath = "/resouces/closed.png";
+                                break;
+                        }
+
+                        // Kiểm tra URL trước khi sử dụng
+                        URL resourceUrl = getClass().getResource(imageResourcePath);
+                        if (resourceUrl != null) {
+                            statusImageView.setImage(new Image(resourceUrl.toExternalForm()));
+                        } else {
+                            System.out.println("Warning: Resource not found: " + imageResourcePath);
+                            // Sử dụng một hình ảnh mặc định hoặc tạo một hình ảnh nhỏ
+                            statusImageView.setImage(new Image(new ByteArrayInputStream(new byte[0])));
+                        }
+                    } catch (Exception e) {
+                        System.out.println("Error loading status image: " + e.getMessage());
+                        // Không làm gì nếu không thể tải hình ảnh
+                    }
+
+                    statusImageView.setFitWidth(8);
+                    statusImageView.setFitHeight(8);
+
+                    // Tạo container cho mục liên hệ
+                    HBox contactItem = new HBox(5);
+                    contactItem.getChildren().addAll(statusImageView, contactNameLabel);
+                    contactItem.setAlignment(Pos.CENTER_LEFT);
+
+                    // Thêm sự kiện click cho mục liên hệ
+                    contactItem.setOnMouseClicked((MouseEvent event) -> {
+                        cellClickAction(event, user.getUsername());
+                    });
+
+                    // Thêm vào danh sách phù hợp
+                    if (type.equals("Family")) {
+                        listViewFamily.getItems().add(contactItem);
+                    } else {
+                        listViewContacts.getItems().add(contactItem);
+                    }
+
+                    resultsCount++;
+                }
+            }
+
+            // Hiển thị thông báo nếu không tìm thấy kết quả
+            if (resultsCount == 0) {
+                Label noResultsLabel = new Label("Không tìm thấy liên hệ");
+                noResultsLabel.setStyle("-fx-text-fill: gray;");
+
+                HBox noResultsItem = new HBox();
+                noResultsItem.getChildren().add(noResultsLabel);
+                noResultsItem.setAlignment(Pos.CENTER);
+
+                listViewContacts.getItems().add(noResultsItem);
+            }
+        } catch (Exception e) {
+            System.out.println("Lỗi khi lọc danh bạ: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}

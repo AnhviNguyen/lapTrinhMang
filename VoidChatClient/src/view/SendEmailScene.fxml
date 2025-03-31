@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.text.Text?>
+
+<BorderPane styleClass="email-dialog" xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml">
+    
+    <!-- Header -->
+    <top>
+        <BorderPane style="-fx-background-color: #3578e5; -fx-padding: 10 15 10 15;">
+            <left>
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <ImageView fitHeight="24" fitWidth="24" preserveRatio="true">
+                        <Image url="@../resouces/email.png"/>
+                    </ImageView>
+                    <Label text="Soạn email mới" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: white;"/>
+                </HBox>
+            </left>
+            <right>
+                <Button fx:id="closeButton" onAction="#cancelBtnAction" style="-fx-background-color: transparent;">
+                    <graphic>
+                        <ImageView fitHeight="16" fitWidth="16">
+                            <Image url="@../resouces/close.png"/>
+                        </ImageView>
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="Đóng"/>
+                    </tooltip>
+                </Button>
+            </right>
+        </BorderPane>
+    </top>
+    
+    <!-- Content area -->
+    <center>
+        <VBox spacing="12" style="-fx-background-color: white; -fx-padding: 15;">
+            <!-- Recipient -->
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Label text="Đến:" style="-fx-font-weight: bold; -fx-min-width: 60;"/>
+                <TextField fx:id="txtFieldTo" promptText="Địa chỉ email" HBox.hgrow="ALWAYS" 
+                           style="-fx-background-color: white; -fx-border-color: #e4e6eb; -fx-border-radius: 5;"/>
+            </HBox>
+            
+            <!-- Subject -->
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Label text="Chủ đề:" style="-fx-font-weight: bold; -fx-min-width: 60;"/>
+                <TextField fx:id="txtFieldSubject" promptText="Tiêu đề email" HBox.hgrow="ALWAYS"
+                           style="-fx-background-color: white; -fx-border-color: #e4e6eb; -fx-border-radius: 5;"/>
+            </HBox>
+            
+            <Separator/>
+            
+            <!-- Formatting toolbar -->
+            <HBox spacing="5" alignment="CENTER_LEFT" style="-fx-padding: 0 0 5 0;">
+                <ToggleButton fx:id="boldToggleBtn" mnemonicParsing="false" prefHeight="22.0" prefWidth="22.0" 
+                               style="-fx-background-color: transparent; -fx-border-color: #dddddd; -fx-border-radius: 3;">
+                    <graphic>
+                        <Text style="-fx-font-weight: bold; -fx-font-size: 11;" text="B" />
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="In đậm" />
+                    </tooltip>
+                </ToggleButton>
+                <ToggleButton fx:id="italicToggleBtn" mnemonicParsing="false" prefHeight="22.0" prefWidth="22.0" 
+                               style="-fx-background-color: transparent; -fx-border-color: #dddddd; -fx-border-radius: 3;">
+                    <graphic>
+                        <Text style="-fx-font-style: italic; -fx-font-size: 11;" text="I" />
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="In nghiêng" />
+                    </tooltip>
+                </ToggleButton>
+                <ToggleButton fx:id="underlineToggleBtn" mnemonicParsing="false" prefHeight="22.0" prefWidth="22.0" 
+                               style="-fx-background-color: transparent; -fx-border-color: #dddddd; -fx-border-radius: 3;">
+                    <graphic>
+                        <Text style="-fx-underline: true; -fx-font-size: 11;" text="U" />
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="Gạch chân" />
+                    </tooltip>
+                </ToggleButton>
+                <Separator orientation="VERTICAL" prefHeight="22.0" />
+                <ComboBox fx:id="fontComboBox" prefHeight="22.0" prefWidth="90.0">
+                    <tooltip>
+                        <Tooltip text="Kiểu chữ" />
+                    </tooltip>
+                </ComboBox>
+                <ComboBox fx:id="fontSizeComboBox" prefHeight="22.0" prefWidth="45.0">
+                    <tooltip>
+                        <Tooltip text="Cỡ chữ" />
+                    </tooltip>
+                </ComboBox>
+                <ColorPicker fx:id="colorPicker" prefHeight="22.0" prefWidth="30.0">
+                    <tooltip>
+                        <Tooltip text="Màu chữ" />
+                    </tooltip>
+                </ColorPicker>
+            </HBox>
+            
+            <!-- Message area -->
+            <TextArea fx:id="txtAreaMessage" wrapText="true" prefRowCount="10" prefHeight="200" 
+                      promptText="Soạn tin nhắn của bạn..." 
+                      style="-fx-border-color: #e4e6eb; -fx-background-color: white; -fx-border-radius: 5; -fx-control-inner-background: white;">
+                <VBox.margin>
+                    <Insets top="5" />
+                </VBox.margin>
+            </TextArea>
+        </VBox>
+    </center>
+    
+    <!-- Footer with buttons -->
+    <bottom>
+        <HBox spacing="10" alignment="CENTER_RIGHT" style="-fx-background-color: #f0f2f5; -fx-padding: 10 15 10 15;">
+            <Button text="Hủy" onAction="#cancelBtnAction" 
+                    style="-fx-background-color: #e4e6eb; -fx-text-fill: #050505; -fx-font-weight: bold; -fx-background-radius: 6;"/>
+            <Button text="Gửi" onAction="#sendBtnAction" 
+                    style="-fx-background-color: #1877f2; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 6;"/>
+        </HBox>
+    </bottom>
+    
+</BorderPane>

@@ -1,0 +1,10 @@
+.write-blog span:hover {
+    transform: scale(1.5); /* Adjusted scale for smaller size */
+}
+
+/* Additional styles to reduce overall size */
+.some-container {
+    width: 80%; /* Adjust width */
+    height: auto; /* Adjust height */
+    font-size: 0.9em; /* Adjust font size */
+} 

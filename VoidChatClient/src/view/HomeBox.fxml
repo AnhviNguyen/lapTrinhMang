@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<VBox fx:id="homeBox" style="-fx-background-color: #ffffff;" BorderPane.alignment="CENTER" 
+      xmlns="http://javafx.com/javafx/8.0.111" xmlns:fx="http://javafx.com/fxml/1" 
+      fx:controller="view.HomeBoxController">
+    <children>
+        <VBox style="-fx-background-color: #ffffff; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 3, 0, 0, 0);">
+            <padding>
+                <Insets top="15" bottom="15" left="15" right="15"/>
+            </padding>
+            
+            <HBox alignment="CENTER_LEFT" spacing="10">
+                <ImageView fx:id="userAvatar" fitHeight="45.0" fitWidth="45.0" 
+                         style="-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 3, 0, 0, 0);">
+                    <image>
+                        <Image url="@../resouces/user.png"/>
+                    </image>
+                </ImageView>
+                
+                <VBox spacing="2">
+                    <Label fx:id="labelUserName" style="-fx-font-weight: bold;" text="User Name">
+                        <font>
+                            <Font size="16.0"/>
+                        </font>
+                    </Label>
+                    <Label style="-fx-text-fill: #65676b; -fx-font-size: 11;" text="Welcome to Void Chat"/>
+                </VBox>
+            </HBox>
+        </VBox>
+
+        <VBox spacing="15" style="-fx-background-color: #ffffff;">
+            <padding>
+                <Insets top="10" bottom="10" left="15" right="15"/>
+            </padding>
+
+            <VBox style="-fx-background-color: #f0f2f5; -fx-background-radius: 8;">
+                <padding>
+                    <Insets top="12" bottom="12" left="12" right="12"/>
+                </padding>
+                
+                <Label text="Server Announcement" style="-fx-font-weight: bold;">
+                    <font>
+                        <Font size="14.0"/>
+                    </font>
+                </Label>
+                
+                <TextFlow fx:id="txtFlowServerMsg">
+                    <padding>
+                        <Insets top="8"/>
+                    </padding>
+                    <Text fx:id="serverMessage" style="-fx-fill: #050505;"
+                          text="Server message: Welcome to Void Chat! Connect with friends and start chatting.">
+                        <font>
+                            <Font size="12.0"/>
+                        </font>
+                    </Text>
+                </TextFlow>
+            </VBox>
+
+            <VBox style="-fx-background-color: #ffffff; -fx-border-color: #f0f2f5; -fx-border-radius: 8;">
+                <padding>
+                    <Insets top="12" bottom="12" left="12" right="12"/>
+                </padding>
+                
+                <Label text="Sponsored" style="-fx-font-weight: bold; -fx-text-fill: #65676b; -fx-font-size: 11;">
+                    <font>
+                        <Font size="11.0"/>
+                    </font>
+                </Label>
+                
+                <ImageView fx:id="sponser" fitWidth="160.0" preserveRatio="true">
+                    <VBox.margin>
+                        <Insets top="8"/>
+                    </VBox.margin>
+                    <image>
+                        <Image url="@../resouces/Voidlogo.png"/>
+                    </image>
+                </ImageView>
+            </VBox>
+        </VBox>
+    </children>
+</VBox>
