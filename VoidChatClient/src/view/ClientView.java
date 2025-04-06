@@ -35,7 +35,7 @@ public class ClientView extends Application implements ClientViewInt {
     public Label serverStatusLabel;
 
     // 2na 2le 3amlaha
-    view.ChatBoxController chatBoxController;
+    public view.ChatBoxController chatBoxController;
 
     // views Controller
     ChatSceneController chatSceneController;
@@ -460,46 +460,13 @@ public class ClientView extends Application implements ClientViewInt {
      */
     @Override
     public void receiveAvatarUpdate(String username) {
-        Platform.runLater(() -> {
-            try {
-                System.out.println("Receiving avatar update for user: " + username);
-
-                // Invalidate our cached user data to force a fresh fetch
-                User refreshedUser = controller.getUser(username);
-
-                if (chatSceneController != null) {
-                    // 1. Update tabs showing this user
-                    chatSceneController.updateFriendTabIcon(username);
-
-                    // 2. Refresh this user's avatar in all contact lists
-                    chatSceneController.refreshContacts();
-
-                    // 3. Update the friend avatar in any open chat boxes
-                    // This will handle all the user's messages in chat windows too
-                    chatSceneController.refreshContactAvatar(username);
-
-                    // 4. Show a subtle notification
-                    showGeneralNotification(username + " updated their profile picture");
-                }
-
-                // Force UI redraw to ensure changes are visible
-                Stage stage = mainStage;
-                if (stage != null) {
-                    double width = stage.getWidth();
-                    stage.setWidth(width + 0.1);
-                    stage.setWidth(width);
-                }
-            } catch (Exception ex) {
-                System.out.println("Error updating avatar from notification: " + ex.getMessage());
-                ex.printStackTrace();
-            }
-        });
+        // Force refresh of avatar display across all views
+        forceAvatarRefresh(username);
     }
 
     /**
      * Send voice message to specific user
-     * 
-     * @param message
+     *
      * @throws RemoteException
      */
     public void sendVoiceMessage(VoiceMessage voiceMessage) throws RemoteException {
@@ -515,7 +482,6 @@ public class ClientView extends Application implements ClientViewInt {
                 if (groupMembers.length == 0) {
                     ArrayList<User> allContacts = getContacts();
                     if (allContacts != null) {
-                        // Just send to all contacts in case we can't resolve the group
                         groupMembers = allContacts.stream()
                                 .map(User::getUsername)
                                 .toArray(String[]::new);
@@ -532,19 +498,19 @@ public class ClientView extends Application implements ClientViewInt {
                                 allOffline = false;
                             } catch (RemoteException ex) {
                                 System.out.println("Could not send voice message to group member: " + member);
+                                controller.storeOfflineVoiceMessage(member, voiceMessage);
                             }
                         } else {
-                            System.out.println("Warning: Group member " + member
+                            System.out.println("Group member " + member
                                     + " is offline. Message will be delivered when they come online.");
-                            // Store message for offline delivery
                             controller.storeOfflineVoiceMessage(member, voiceMessage);
                         }
                     }
                 }
 
                 if (allOffline) {
-                    System.out
-                            .println("All group members are offline. Message will be delivered when they come online.");
+                    System.out.println(
+                            "All group members are offline. Messages will be delivered when they come online.");
                 }
             } else {
                 // Direct message handling
@@ -555,18 +521,17 @@ public class ClientView extends Application implements ClientViewInt {
                     } catch (RemoteException ex) {
                         System.out.println(
                                 "Error sending voice message to " + voiceMessage.getTo() + ": " + ex.getMessage());
-                        // Store message for later delivery
                         controller.storeOfflineVoiceMessage(voiceMessage.getTo(), voiceMessage);
                         throw new RemoteException(
-                                "Message stored and will be delivered when " + voiceMessage.getTo() + " comes online.");
+                                "User " + voiceMessage.getTo()
+                                        + " is offline. Message stored and will be delivered when they come online.",
+                                new Throwable("OFFLINE_HANDLED"));
                     }
                 } else {
                     // User is offline - store the message for later delivery
                     System.out.println("User " + voiceMessage.getTo()
                             + " is offline. Voice message will be delivered when they come online.");
                     controller.storeOfflineVoiceMessage(voiceMessage.getTo(), voiceMessage);
-
-                    // Return a non-error message since we handled the offline case
                     throw new RemoteException(
                             "User " + voiceMessage.getTo()
                                     + " is offline. Message stored and will be delivered when they come online.",
@@ -578,10 +543,9 @@ public class ClientView extends Application implements ClientViewInt {
             if (ex.getCause() == null || !"OFFLINE_HANDLED".equals(ex.getCause().getMessage())) {
                 ex.printStackTrace();
                 throw ex;
-            } else {
-                // This is our specially marked exception - just rethrow it
-                throw ex;
             }
+            // This is our specially marked exception - just rethrow it
+            throw ex;
         } catch (Exception ex) {
             ex.printStackTrace();
             throw new RemoteException("Unexpected error sending voice message: " + ex.getMessage());
@@ -596,35 +560,12 @@ public class ClientView extends Application implements ClientViewInt {
      */
     @Override
     public void receiveVoiceMessage(VoiceMessage voiceMessage) throws IOException {
-        if (voiceMessage.getTo().contains("##")) {
-            boolean groupTabExist = false;
-            for (Map.Entry<String, ChatBoxController> entry : chatSceneController.getTabsControllers().entrySet()) {
-                if (entry.getKey().equals(voiceMessage.getTo())) {
-                    groupTabExist = true;
-                    entry.getValue().receiveVoiceMessage(voiceMessage);
-                    break;
-                }
-            }
-            if (!groupTabExist) {
-                chatSceneController.createGroup(voiceMessage.getTo());
-                ChatBoxController chatBoxController = chatSceneController.getTabsControllers()
-                        .get(voiceMessage.getTo());
-                chatBoxController.receiveVoiceMessage(voiceMessage);
-            }
+        // Forward to chat box controller if available
+        if (chatBoxController != null) {
+            chatBoxController.receiveVoiceMessage(voiceMessage);
         } else {
-            boolean tabExist = false;
-            for (Map.Entry<String, ChatBoxController> entry : chatSceneController.getTabsControllers().entrySet()) {
-                if (entry.getKey().equals(voiceMessage.getFrom())) {
-                    tabExist = true;
-                    entry.getValue().receiveVoiceMessage(voiceMessage);
-                    break;
-                }
-            }
-            if (!tabExist) {
-                chatSceneController.openChatBox(voiceMessage.getFrom());
-                ChatBoxController controller = chatSceneController.getTabsControllers().get(voiceMessage.getFrom());
-                controller.receiveVoiceMessage(voiceMessage);
-            }
+            // If no chat box controller is available, show a notification
+            notify("New voice message from " + voiceMessage.getFrom(), Notification.GENERAL);
         }
     }
 }

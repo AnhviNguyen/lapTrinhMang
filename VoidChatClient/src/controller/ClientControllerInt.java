@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import model.ClientModelInt;
 import model.Message;
 import model.User;
+import model.VoiceMessage;
 import utilitez.Pair;
 
 public interface ClientControllerInt {
@@ -168,4 +169,19 @@ public interface ClientControllerInt {
      * @param username username of the user who updated their avatar
      */
     void receiveAvatarUpdate(String username);
+
+    /**
+     * Send a voice message to another user
+     * 
+     * @param receiver     The username of the receiver
+     * @param voiceMessage The voice message to send
+     */
+    void sendVoiceMessage(String receiver, VoiceMessage voiceMessage);
+
+    /**
+     * Receive a voice message from another user
+     * 
+     * @param voiceMessage The voice message that was received
+     */
+    void receiveVoiceMessage(VoiceMessage voiceMessage);
 }

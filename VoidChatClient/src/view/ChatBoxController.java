@@ -146,11 +146,13 @@ public class ChatBoxController implements Initializable {
      * Default constructor used by FXML loader
      */
     public ChatBoxController() {
-        clientView = ClientView.getInstance();
-        clientView.chatBoxController = this;
+        // Initialize only if not already initialized
+        if (clientView == null) {
+            clientView = ClientView.getInstance();
+            clientView.chatBoxController = this;
+        }
     }
 
-    // 3amlt deh
     public ChatBoxController(String receiver) {
         this();
         this.receiver = receiver;
@@ -164,7 +166,6 @@ public class ChatBoxController implements Initializable {
             receiver = message.getFrom();
             conFlag = true;
         }
-
     }
 
     /**
@@ -2189,12 +2190,10 @@ public class ChatBoxController implements Initializable {
      */
     private void sendVoiceMessage(VoiceMessage voiceMessage) {
         try {
-            // Display message in UI regardless of sending status
-            // This provides immediate feedback to the user that their recording is
-            // processed
+            // Display message in UI immediately for better user experience
             displaySentVoiceMessage(voiceMessage);
 
-            // Try to send the message to the receiver
+            // Try to send the message
             try {
                 clientView.sendVoiceMessage(voiceMessage);
             } catch (RemoteException ex) {
@@ -2202,42 +2201,32 @@ public class ChatBoxController implements Initializable {
 
                 // Check if this is our "offline handled" case
                 if (errorMsg != null && errorMsg.contains("offline") && errorMsg.contains("stored")) {
-                    // Show a friendly "message queued" notification instead of an error
+                    // Show a friendly "message queued" notification
                     Platform.runLater(() -> {
-                        // Add a notification in the chat that message is pending delivery
                         HBox statusContainer = new HBox();
                         statusContainer.setAlignment(Pos.CENTER);
+                        statusContainer.setPadding(new Insets(5, 10, 5, 10));
 
                         Label statusLabel = new Label("Voice message will be delivered when " +
                                 voiceMessage.getTo() + " comes online");
                         statusLabel.setStyle("-fx-text-fill: #888888; -fx-font-style: italic; -fx-font-size: 11px;");
-                        statusContainer.getChildren().add(statusLabel);
 
-                        // Add status icon - pending/clock icon
+                        // Add status icon
                         ImageView pendingIcon = new ImageView(
                                 new Image(getClass().getResourceAsStream("/resouces/pending.png")));
-                        if (pendingIcon.getImage().isError()) {
-                            // Fallback if image is not available
-                            Circle circle = new Circle(6, Color.ORANGE);
-                            statusContainer.getChildren().add(0, circle);
-                        } else {
-                            pendingIcon.setFitWidth(12);
-                            pendingIcon.setFitHeight(12);
-                            statusContainer.getChildren().add(0, pendingIcon);
-                        }
+                        pendingIcon.setFitWidth(12);
+                        pendingIcon.setFitHeight(12);
 
-                        // Add spacing
+                        statusContainer.getChildren().addAll(pendingIcon, statusLabel);
                         statusContainer.setSpacing(5);
 
-                        // Add the status message to chat
                         listviewChat.getItems().add(statusContainer);
                         listviewChat.scrollTo(listviewChat.getItems().size() - 1);
                     });
                 } else {
-                    // For more serious errors, show an alert
+                    // For other errors, show an alert
                     showAlert("Error", "Could not send voice message: " + ex.getMessage());
                 }
-                ex.printStackTrace();
             }
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -2306,9 +2295,8 @@ public class ChatBoxController implements Initializable {
                             senderAvatar.setImage(image);
                         } else {
                             // Set default avatar based on gender
-                            String defaultImage = (sender.getGender() != null
-                                    && sender.getGender().equalsIgnoreCase("Female"))
-                                            ? "/resouces/female.png"
+                            String defaultImage = (sender.getGender() != null &&
+                                    sender.getGender().equalsIgnoreCase("Female")) ? "/resouces/female.png"
                                             : "/resouces/male.png";
                             senderAvatar.setImage(new Image(getClass().getResourceAsStream(defaultImage)));
                         }
@@ -2321,7 +2309,7 @@ public class ChatBoxController implements Initializable {
                     }
                 }
 
-                // Add timestamp
+                // Add sender info and timestamp
                 VBox senderInfo = new VBox(3);
                 Label nameLabel = new Label(voiceMessage.getFrom());
                 nameLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 10px;");

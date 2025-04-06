@@ -438,11 +438,22 @@ public class ClientController implements ClientControllerInt {
      * @param receiver     The username of the receiver
      * @param voiceMessage The voice message to send
      */
+    @Override
     public void sendVoiceMessage(String receiver, VoiceMessage voiceMessage) {
         try {
-            serverModelInt.sendVoiceMessage(loginUser.getUsername(), receiver, voiceMessage);
+            // Check if receiver is online
+            ClientModelInt receiverConnection = serverModelInt.getConnection(receiver);
+            if (receiverConnection != null) {
+                // Receiver is online, send directly
+                receiverConnection.receiveVoiceMessage(voiceMessage);
+            } else {
+                // Receiver is offline, store message
+                offlineVoiceMessages.computeIfAbsent(receiver, k -> new CopyOnWriteArrayList<>()).add(voiceMessage);
+                throw new RemoteException("Message stored for offline delivery to " + receiver);
+            }
         } catch (RemoteException ex) {
-            ex.printStackTrace();
+            // Propagate the exception to handle offline case
+            throw new RuntimeException(ex);
         }
     }
 
@@ -451,11 +462,11 @@ public class ClientController implements ClientControllerInt {
      *
      * @param voiceMessage The voice message that was received
      */
+    @Override
     public void receiveVoiceMessage(VoiceMessage voiceMessage) {
-        try {
-            view.receiveVoiceMessage(voiceMessage);
-        } catch (IOException ex) {
-            ex.printStackTrace();
+        // Forward to view for display
+        if (view != null && view.chatBoxController != null) {
+            view.chatBoxController.receiveVoiceMessage(voiceMessage);
         }
     }
 
@@ -484,37 +495,32 @@ public class ClientController implements ClientControllerInt {
      * 
      * @param username The username of the user who came online
      */
-    public void checkAndDeliverOfflineVoiceMessages(String username) {
-        List<VoiceMessage> messages = offlineVoiceMessages.get(username);
-        if (messages != null && !messages.isEmpty()) {
-            System.out.println("Found " + messages.size() + " offline voice messages for " + username);
+    private void checkAndDeliverOfflineVoiceMessages(String username) {
+        try {
+            List<VoiceMessage> messages = offlineVoiceMessages.get(username);
+            if (messages != null && !messages.isEmpty()) {
+                ClientModelInt receiverConnection = serverModelInt.getConnection(username);
+                if (receiverConnection != null) {
+                    // Create a copy of messages to avoid concurrent modification
+                    List<VoiceMessage> messagesToSend = new ArrayList<>(messages);
+                    for (VoiceMessage message : messagesToSend) {
+                        try {
+                            receiverConnection.receiveVoiceMessage(message);
+                            messages.remove(message); // Remove successfully sent message
+                        } catch (RemoteException ex) {
+                            System.err
+                                    .println("Failed to deliver voice message to " + username + ": " + ex.getMessage());
+                        }
+                    }
 
-            // Get a connection to the user
-            ClientModelInt connection = getConnection(username);
-            if (connection != null) {
-                List<VoiceMessage> failedMessages = new ArrayList<>();
-
-                // Try to send each message
-                for (VoiceMessage message : messages) {
-                    try {
-                        connection.sendVoiceMessage(username, message);
-                        System.out.println("Successfully delivered offline voice message to " + username);
-                    } catch (RemoteException ex) {
-                        System.out.println(
-                                "Failed to deliver offline voice message to " + username + ": " + ex.getMessage());
-                        failedMessages.add(message);
+                    // If all messages were delivered, remove the entry
+                    if (messages.isEmpty()) {
+                        offlineVoiceMessages.remove(username);
                     }
                 }
-
-                // Clear successfully sent messages and keep failed ones
-                messages.clear();
-                if (!failedMessages.isEmpty()) {
-                    messages.addAll(failedMessages);
-                } else {
-                    // Remove the entry if all messages were delivered
-                    offlineVoiceMessages.remove(username);
-                }
             }
+        } catch (RemoteException ex) {
+            System.err.println("Error checking offline messages for " + username + ": " + ex.getMessage());
         }
     }
 

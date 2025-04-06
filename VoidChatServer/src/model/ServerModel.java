@@ -715,15 +715,32 @@ public class ServerModel extends UnicastRemoteObject implements ServerModelInt {
     @Override
     public synchronized void sendVoiceMessage(String sender, String receiver, VoiceMessage voiceMessage)
             throws RemoteException {
-        System.out.println(
-                "ServerModel: Received voice message from " + sender + " to " + receiver);
+        System.out.println("ServerModel: Received voice message from " + sender + " to " + receiver);
         try {
+            // Validate the message
+            if (voiceMessage == null) {
+                throw new RemoteException("Voice message cannot be null");
+            }
+            if (sender == null || sender.trim().isEmpty()) {
+                throw new RemoteException("Sender cannot be null or empty");
+            }
+            if (receiver == null || receiver.trim().isEmpty()) {
+                throw new RemoteException("Receiver cannot be null or empty");
+            }
+            if (voiceMessage.getAudioData() == null || voiceMessage.getAudioData().length == 0) {
+                throw new RemoteException("Voice message audio data cannot be null or empty");
+            }
+
+            // Forward to controller
             controller.sendVoiceMessage(voiceMessage);
             System.out.println("ServerModel: Successfully forwarded voice message to controller");
-        } catch (Exception e) {
-            System.err.println("ServerModel: Error sending voice message: " + e.getMessage());
-            e.printStackTrace();
+        } catch (RemoteException e) {
+            System.err.println("ServerModel: RemoteException while sending voice message: " + e.getMessage());
             throw e;
+        } catch (Exception e) {
+            System.err.println("ServerModel: Unexpected error sending voice message: " + e.getMessage());
+            e.printStackTrace();
+            throw new RemoteException("Failed to process voice message: " + e.getMessage());
         }
     }
 }
