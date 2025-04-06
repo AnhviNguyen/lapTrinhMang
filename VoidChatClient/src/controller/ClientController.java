@@ -173,7 +173,18 @@ public class ClientController implements ClientControllerInt {
     @Override
     public void changeStatus(String status) {
         try {
+            // Update local status immediately
+            loginUser.setStatus(status);
+
+            // Update server status
             serverModelInt.changeStatus(loginUser.getUsername(), status);
+
+            // Update UI immediately
+            Platform.runLater(() -> {
+                if (view != null) {
+                    view.updateUserStatus(loginUser.getUsername(), status);
+                }
+            });
 
             // If the user is coming online, check for offline messages to deliver to others
             if (status.equals("online")) {

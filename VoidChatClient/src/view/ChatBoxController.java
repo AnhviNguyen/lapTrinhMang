@@ -2401,4 +2401,43 @@ public class ChatBoxController implements Initializable {
             }
         }
     }
+
+    public void updateFriendStatus(String username, String status) {
+        if (username.equals(receiver)) {
+            Platform.runLater(() -> {
+                if (labelFriendStatus != null) {
+                    // Create a Circle status indicator
+                    Circle statusIndicator = new Circle(5);
+                    statusIndicator.setTranslateY(0);
+
+                    switch (status.toLowerCase()) {
+                        case "online":
+                            labelFriendStatus.setText("Active Now");
+                            statusIndicator.getStyleClass().add("status-indicator-online");
+                            break;
+                        case "busy":
+                            labelFriendStatus.setText("Busy");
+                            statusIndicator.getStyleClass().add("status-indicator-busy");
+                            break;
+                        case "offline":
+                        default:
+                            labelFriendStatus.setText("Offline");
+                            statusIndicator.getStyleClass().add("status-indicator-offline");
+                            break;
+                    }
+
+                    // Create a horizontal box to hold the indicator and text
+                    HBox statusBox = new HBox(5); // 5px spacing
+                    statusBox.setAlignment(Pos.CENTER_LEFT);
+
+                    // Add circle and existing label to the box
+                    statusBox.getChildren().addAll(statusIndicator, new Text(labelFriendStatus.getText()));
+
+                    // Clear the existing label and set the content
+                    labelFriendStatus.setGraphic(statusBox);
+                    labelFriendStatus.setText("");
+                }
+            });
+        }
+    }
 }

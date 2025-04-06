@@ -18,6 +18,7 @@ public interface Notification extends Serializable {
     public final static int SERVER_MESSAGE = 4;
     public final static int FRIEND_BUSY = 5;
     public final static int GENERAL = 6;
+    public final static int STATUS_UPDATE = 8;
 
     /**
      * send notification

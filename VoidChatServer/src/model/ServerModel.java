@@ -204,28 +204,68 @@ public class ServerModel extends UnicastRemoteObject implements ServerModelInt {
     public synchronized void changeStatus(String username, String status) throws RemoteException {
         try {
             getConnection();
-            query = "update UserTable set status='" + status + "' where username= '" + username + "'";
+            // Get current status before updating
+            String currentStatus = null;
+            query = "select status from UserTable where username='" + username + "'";
             statement = connection.createStatement();
-            statement.executeUpdate(query);
+            resultSet = statement.executeQuery(query);
+            if (resultSet.next()) {
+                currentStatus = resultSet.getString("status");
+            }
 
-            ArrayList<User> userFriends = userFriends = getContacts(username);
-            if (userFriends != null) {
-                for (int i = 0; i < userFriends.size(); i++) {
-                    if (status.equalsIgnoreCase("online")) {
-                        notify(userFriends.get(i).getUsername(), username + " Become online ",
-                                Notification.FRIEND_ONLINE);
-                    } else if (status.equalsIgnoreCase("offline")) {
-                        notify(userFriends.get(i).getUsername(), username + " Become offline ",
-                                Notification.FRIEND_OFFLINE);
-                    } else if (status.equalsIgnoreCase("busy")) {
-                        notify(userFriends.get(i).getUsername(), username + " Become busy ", Notification.FRIEND_BUSY);
+            // Only proceed if status is actually changing
+            if (currentStatus == null || !status.equalsIgnoreCase(currentStatus)) {
+                // Update status in database
+                query = "update UserTable set status='" + status + "' where username= '" + username + "'";
+                statement = connection.createStatement();
+                statement.executeUpdate(query);
+
+                // Get all friends of the user
+                ArrayList<User> userFriends = getContacts(username);
+                if (userFriends != null) {
+                    for (User friend : userFriends) {
+                        // Get the friend's client connection if they are online
+                        ClientModelInt friendClient = controller.getOnlineUsers().get(friend.getUsername());
+                        if (friendClient != null) {
+                            try {
+                                // Send only one status notification
+                                String notificationMessage = username + " is now " + status.toLowerCase();
+                                int notificationType;
+
+                                switch (status.toLowerCase()) {
+                                    case "online":
+                                        notificationType = Notification.FRIEND_ONLINE;
+                                        break;
+                                    case "offline":
+                                        notificationType = Notification.FRIEND_OFFLINE;
+                                        break;
+                                    case "busy":
+                                        notificationType = Notification.FRIEND_BUSY;
+                                        break;
+                                    default:
+                                        continue;
+                                }
+
+                                // Send a single notification
+                                friendClient.notify(notificationMessage, notificationType);
+
+                                // Update UI without additional notification
+                                friendClient.notify("STATUS_UPDATE:" + username + ":" + status,
+                                        Notification.STATUS_UPDATE);
+                            } catch (RemoteException ex) {
+                                System.out.println("Failed to notify " + friend.getUsername() + " about status change: "
+                                        + ex.getMessage());
+                                controller.unregister(friend.getUsername());
+                            }
+                        }
                     }
                 }
             }
         } catch (SQLException ex) {
             ex.printStackTrace();
+        } finally {
+            closeResources();
         }
-        closeResources();
     }
 
     @Override

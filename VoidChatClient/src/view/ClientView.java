@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.IOException;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -41,6 +42,9 @@ public class ClientView extends Application implements ClientViewInt {
     ChatSceneController chatSceneController;
     // HomeBox Controller
     HomeBoxController homeBoxController;
+
+    // Map to store chat box controllers
+    private Map<String, ChatBoxController> tabsControllers = new HashMap<>();
 
     public ClientView() {
         controller = new ClientController(this);
@@ -97,6 +101,26 @@ public class ClientView extends Application implements ClientViewInt {
 
     @Override
     public void changeStatus(String status) {
+        // Update local UI immediately first
+        Platform.runLater(() -> {
+            // Update status in chat scene if it's open
+            if (chatSceneController != null) {
+                chatSceneController.updateContactStatus(getUserInformation().getUsername(), status);
+                // Update the status dropdown in the UI
+                chatSceneController.updateStatusDropdown(status);
+            }
+
+            // Update any open chat boxes
+            if (tabsControllers != null) {
+                for (ChatBoxController controller : tabsControllers.values()) {
+                    if (controller != null) {
+                        controller.updateFriendStatus(getUserInformation().getUsername(), status);
+                    }
+                }
+            }
+        });
+
+        // Then notify server to update other clients
         controller.changeStatus(status);
     }
     /////////////////////////////////////////////////////////////////////
@@ -130,6 +154,15 @@ public class ClientView extends Application implements ClientViewInt {
                     break;
                 case Notification.FRIEND_BUSY:
                     showFriendBusy(message);
+                    break;
+                case Notification.STATUS_UPDATE:
+                    // Handle immediate status update notification
+                    String[] parts = message.split(":");
+                    if (parts.length == 3 && parts[0].equals("STATUS_UPDATE")) {
+                        String username = parts[1];
+                        String status = parts[2];
+                        updateUserStatus(username, status);
+                    }
                     break;
                 case Notification.GENERAL:
                     if (message.equals("REFRESH_CONTACTS")) {
@@ -567,5 +600,44 @@ public class ClientView extends Application implements ClientViewInt {
             // If no chat box controller is available, show a notification
             notify("New voice message from " + voiceMessage.getFrom(), Notification.GENERAL);
         }
+    }
+
+    public void updateUserStatus(String username, String status) {
+        // Update status in the UI immediately
+        Platform.runLater(() -> {
+            // Update status in chat scene if it's open
+            if (chatSceneController != null) {
+                chatSceneController.updateContactStatus(username, status);
+                // If this is the current user, update the status dropdown
+                if (username.equals(getUserInformation().getUsername())) {
+                    chatSceneController.updateStatusDropdown(status);
+                }
+            }
+
+            // Update status in any open chat boxes
+            if (tabsControllers != null) {
+                for (ChatBoxController controller : tabsControllers.values()) {
+                    if (controller != null) {
+                        controller.updateFriendStatus(username, status);
+                    }
+                }
+            }
+        });
+    }
+
+    public void addChatBoxController(String username, ChatBoxController controller) {
+        if (tabsControllers != null) {
+            tabsControllers.put(username, controller);
+        }
+    }
+
+    public void removeChatBoxController(String username) {
+        if (tabsControllers != null) {
+            tabsControllers.remove(username);
+        }
+    }
+
+    public ChatBoxController getChatBoxController(String username) {
+        return tabsControllers != null ? tabsControllers.get(username) : null;
     }
 }

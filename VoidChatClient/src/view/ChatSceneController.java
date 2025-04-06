@@ -89,7 +89,7 @@ public class ChatSceneController implements Initializable {
     @FXML
     private TabPane tabPane;
     @FXML
-    private ComboBox comboBoxStatus;
+    private ComboBox<String> comboBoxStatus;
     @FXML
     private VBox leftPane;
     // -----merna-----
@@ -125,6 +125,9 @@ public class ChatSceneController implements Initializable {
 
     @FXML
     private TextField txtFieldSearch;
+
+    @FXML
+    private ComboBox<String> statusComboBox;
 
     public ChatSceneController() {
         // get instance form view
@@ -171,6 +174,20 @@ public class ChatSceneController implements Initializable {
             System.out.println("Error during initialization: " + e.getMessage());
             e.printStackTrace();
         }
+
+        // Initialize status combo box
+        comboBoxStatus.setItems(FXCollections.observableArrayList("online", "offline", "busy"));
+
+        // Add listener for status changes
+        comboBoxStatus.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue != null && !newValue.equals(oldValue)) {
+                // Update UI immediately
+                updateStatusDropdown(newValue);
+
+                // Notify server about status change
+                clinetView.changeStatus(newValue);
+            }
+        });
     }
 
     @FXML
@@ -2001,5 +2018,76 @@ public class ChatSceneController implements Initializable {
      */
     public Map<String, ChatBoxController> getTabsControllers() {
         return tabsControllers;
+    }
+
+    public void updateContactStatus(String username, String status) {
+        Platform.runLater(() -> {
+            // Update in contacts list
+            for (HBox contactBox : listViewContacts.getItems()) {
+                Label usernameLabel = (Label) contactBox.lookup(".friend-name");
+                if (usernameLabel != null && usernameLabel.getText().equals(username)) {
+                    Label statusLabel = (Label) contactBox.lookup(".friend-status");
+                    Circle statusIndicator = (Circle) contactBox.lookup(".status-indicator");
+
+                    if (statusLabel != null) {
+                        statusLabel.setText(status);
+                    }
+
+                    if (statusIndicator != null) {
+                        statusIndicator.getStyleClass().removeAll("status-indicator-online", "status-indicator-offline",
+                                "status-indicator-busy");
+                        statusIndicator.getStyleClass().add("status-indicator-" + status.toLowerCase());
+                    }
+                    break;
+                }
+            }
+
+            // Update in family list
+            for (HBox contactBox : listViewFamily.getItems()) {
+                Label usernameLabel = (Label) contactBox.lookup(".friend-name");
+                if (usernameLabel != null && usernameLabel.getText().equals(username)) {
+                    Label statusLabel = (Label) contactBox.lookup(".friend-status");
+                    Circle statusIndicator = (Circle) contactBox.lookup(".status-indicator");
+
+                    if (statusLabel != null) {
+                        statusLabel.setText(status);
+                    }
+
+                    if (statusIndicator != null) {
+                        statusIndicator.getStyleClass().removeAll("status-indicator-online", "status-indicator-offline",
+                                "status-indicator-busy");
+                        statusIndicator.getStyleClass().add("status-indicator-" + status.toLowerCase());
+                    }
+                    break;
+                }
+            }
+
+            // Also update any open chat boxes
+            if (clinetView != null) {
+                clinetView.updateUserStatus(username, status);
+            }
+        });
+    }
+
+    public void updateStatusDropdown(String status) {
+        Platform.runLater(() -> {
+            if (comboBoxStatus != null) {
+                comboBoxStatus.setValue(status);
+
+                // Update the style of the ComboBox based on status
+                comboBoxStatus.getStyleClass().removeAll("status-online", "status-offline", "status-busy");
+                switch (status.toLowerCase()) {
+                    case "online":
+                        comboBoxStatus.getStyleClass().add("status-online");
+                        break;
+                    case "offline":
+                        comboBoxStatus.getStyleClass().add("status-offline");
+                        break;
+                    case "busy":
+                        comboBoxStatus.getStyleClass().add("status-busy");
+                        break;
+                }
+            }
+        });
     }
 }

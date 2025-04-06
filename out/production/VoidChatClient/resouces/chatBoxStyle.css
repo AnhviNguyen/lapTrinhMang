@@ -445,4 +445,56 @@
 .profile-picture-container .image-view {
     -fx-background-radius: 50%;
     -fx-border-radius: 50%;
+}
+
+.status-online {
+    -fx-text-fill: #42b72a;
+    -fx-background-color: #ffffff;
+}
+
+.status-online .arrow {
+    -fx-background-color: #42b72a;
+}
+
+.status-offline {
+    -fx-text-fill: #65676b;
+    -fx-background-color: #ffffff;
+}
+
+.status-offline .arrow {
+    -fx-background-color: #65676b;
+}
+
+.status-busy {
+    -fx-text-fill: #e41e3f;
+    -fx-background-color: #ffffff;
+}
+
+.status-busy .arrow {
+    -fx-background-color: #e41e3f;
+}
+
+.status-combobox {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-font-size: 14px;
+    -fx-padding: 4px;
+}
+
+.status-combobox:hover {
+    -fx-background-color: rgba(0, 0, 0, 0.05);
+}
+
+.status-combobox .list-cell {
+    -fx-padding: 4px 8px;
+}
+
+.status-combobox .list-view {
+    -fx-background-color: white;
+    -fx-border-color: #e4e6eb;
+    -fx-border-radius: 6px;
+}
+
+.status-combobox .list-cell:hover {
+    -fx-background-color: rgba(0, 0, 0, 0.05);
 } 

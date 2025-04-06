@@ -493,4 +493,8 @@ public class ServerController implements ServerControllerInt {
         }
     }
 
+    public HashMap<String, ClientModelInt> getOnlineUsers() {
+        return onlineUsers;
+    }
+
 }
