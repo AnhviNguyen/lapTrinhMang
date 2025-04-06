@@ -598,7 +598,7 @@ public class ClientView extends Application implements ClientViewInt {
     public void receiveVoiceMessage(VoiceMessage voiceMessage) throws IOException {
         if (voiceMessage.getTo().contains("##")) {
             boolean groupTabExist = false;
-            for (Map.Entry<String, ChatBoxController> entry : chatSceneController.tabsControllers.entrySet()) {
+            for (Map.Entry<String, ChatBoxController> entry : chatSceneController.getTabsControllers().entrySet()) {
                 if (entry.getKey().equals(voiceMessage.getTo())) {
                     groupTabExist = true;
                     entry.getValue().receiveVoiceMessage(voiceMessage);
@@ -607,12 +607,13 @@ public class ClientView extends Application implements ClientViewInt {
             }
             if (!groupTabExist) {
                 chatSceneController.createGroup(voiceMessage.getTo());
-                ChatBoxController chatBoxController = chatSceneController.tabsControllers.get(voiceMessage.getTo());
+                ChatBoxController chatBoxController = chatSceneController.getTabsControllers()
+                        .get(voiceMessage.getTo());
                 chatBoxController.receiveVoiceMessage(voiceMessage);
             }
         } else {
             boolean tabExist = false;
-            for (Map.Entry<String, ChatBoxController> entry : chatSceneController.tabsControllers.entrySet()) {
+            for (Map.Entry<String, ChatBoxController> entry : chatSceneController.getTabsControllers().entrySet()) {
                 if (entry.getKey().equals(voiceMessage.getFrom())) {
                     tabExist = true;
                     entry.getValue().receiveVoiceMessage(voiceMessage);
@@ -621,7 +622,7 @@ public class ClientView extends Application implements ClientViewInt {
             }
             if (!tabExist) {
                 chatSceneController.openChatBox(voiceMessage.getFrom());
-                ChatBoxController controller = chatSceneController.tabsControllers.get(voiceMessage.getFrom());
+                ChatBoxController controller = chatSceneController.getTabsControllers().get(voiceMessage.getFrom());
                 controller.receiveVoiceMessage(voiceMessage);
             }
         }

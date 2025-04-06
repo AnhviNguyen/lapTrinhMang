@@ -423,33 +423,31 @@ public class ServerController implements ServerControllerInt {
         System.out.println("Broadcasting avatar update for user: " + username);
 
         try {
+            // Create a list to store any failed notifications
+            ArrayList<String> failedClients = new ArrayList<>();
+
             // Notify all online users about the avatar update
             for (String onlineUser : onlineUsers.keySet()) {
-                // Don't notify the user who made the update
-                if (!onlineUser.equals(username)) {
-                    ClientModelInt client = onlineUsers.get(onlineUser);
-                    if (client != null) {
-                        try {
-                            // Try to use reflection to check if the method exists before calling it
-                            // This allows compatibility with older clients that don't have the method yet
-                            try {
-                                client.getClass().getMethod("receiveAvatarUpdate", String.class);
-                                // If we get here, the method exists, so call it
-                                client.receiveAvatarUpdate(username);
-                                System.out.println(
-                                        "Notified user " + onlineUser + " about avatar update for " + username);
-                            } catch (NoSuchMethodException e) {
-                                // Method doesn't exist, client is using an older version
-                                System.out.println("User " + onlineUser
-                                        + " has an older client that doesn't support avatar updates");
-                            }
-                        } catch (Exception ex) {
-                            System.out.println(
-                                    "Error calling receiveAvatarUpdate for " + onlineUser + ": " + ex.getMessage());
-                        }
+                try {
+                    ClientModelInt clientObject = onlineUsers.get(onlineUser);
+                    if (clientObject != null) {
+                        System.out.println("Notifying client: " + onlineUser + " about avatar update for: " + username);
+                        clientObject.receiveAvatarUpdate(username);
                     }
+                } catch (RemoteException ex) {
+                    System.out.println(
+                            "Failed to notify client " + onlineUser + " about avatar update: " + ex.getMessage());
+                    failedClients.add(onlineUser);
                 }
             }
+
+            // Remove any failed clients from the online users list
+            for (String failedClient : failedClients) {
+                System.out.println("Removing failed client from online users: " + failedClient);
+                onlineUsers.remove(failedClient);
+            }
+
+            System.out.println("Completed avatar update broadcast for user: " + username);
         } catch (Exception ex) {
             System.out.println("Error broadcasting avatar update: " + ex.getMessage());
             ex.printStackTrace();

@@ -1,6 +1,7 @@
 package model;
 
 import controller.ClientController;
+import view.ChatBoxController;
 import view.ChatSceneController;
 import view.ClientView;
 
@@ -11,6 +12,7 @@ import java.io.Serializable;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
+import javafx.application.Platform;
 
 /**
  *
@@ -98,11 +100,38 @@ public class ClientModel extends UnicastRemoteObject implements ClientModelInt, 
     @Override
     public void receiveAvatarUpdate(String username) throws RemoteException {
         try {
+            System.out.println("Received avatar update notification for user: " + username);
+
             // Get the ChatSceneController instance
             ChatSceneController chatController = ClientView.getInstance().getChatSceneController();
             if (chatController != null) {
                 // Handle the avatar update
                 chatController.handleAvatarUpdate(username);
+
+                // Force refresh of all UI elements showing this user's avatar
+                Platform.runLater(() -> {
+                    try {
+                        // Refresh contacts list
+                        chatController.refreshContacts();
+
+                        // Refresh any open chat windows
+                        if (chatController.getTabsControllers() != null) {
+                            for (ChatBoxController chatBoxController : chatController.getTabsControllers().values()) {
+                                chatBoxController.refreshUserAvatar(username);
+                            }
+                        }
+
+                        // Refresh tab icons
+                        chatController.refreshTabAvatar(username);
+
+                        System.out.println("Successfully processed avatar update for user: " + username);
+                    } catch (Exception ex) {
+                        System.out.println("Error processing avatar update in UI: " + ex.getMessage());
+                        ex.printStackTrace();
+                    }
+                });
+            } else {
+                System.out.println("ChatSceneController not available for avatar update");
             }
         } catch (Exception ex) {
             System.out.println("Error handling avatar update notification: " + ex.getMessage());

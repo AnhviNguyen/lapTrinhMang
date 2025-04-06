@@ -112,7 +112,7 @@ public class ChatSceneController implements Initializable {
     private static boolean falg = false;
 
     Map<String, Tab> tabsOpened = new HashMap<>();
-    Map<String, ChatBoxController> tabsControllers = new HashMap<>();
+    private Map<String, ChatBoxController> tabsControllers = new HashMap<>();
 
     ObservableList<String> statusList = FXCollections.observableArrayList("online", "offline", "busy");
 
@@ -1230,10 +1230,25 @@ public class ChatSceneController implements Initializable {
     public void refreshContactAvatar(String username) {
         Platform.runLater(() -> {
             try {
+                System.out.println("Refreshing avatar for user: " + username);
+
                 // Get fresh user data
                 User updatedUser = clinetView.getUser(username);
-                if (updatedUser == null)
+                if (updatedUser == null) {
+                    System.out.println("Could not get updated user data for: " + username);
                     return;
+                }
+
+                // Clear any cached images for this user
+                if (updatedUser.getImage() != null && !updatedUser.getImage().trim().isEmpty()) {
+                    String imagePath = updatedUser.getImage();
+                    if (imagePath.startsWith("http")) {
+                        String separator = imagePath.contains("?") ? "&" : "?";
+                        imagePath += separator + "t=" + System.currentTimeMillis();
+                    }
+                    // Force image reload by creating new Image object
+                    new Image(imagePath, true);
+                }
 
                 // Refresh in open tabs if available
                 if (tabsControllers.containsKey(username)) {
@@ -1251,7 +1266,18 @@ public class ChatSceneController implements Initializable {
                 if (username.equals(clinetView.getUserInformation().getUsername())) {
                     updateUserProfileImage(updatedUser);
                 }
+
+                // Force UI redraw to make changes visible
+                Stage stage = (Stage) tabPane.getScene().getWindow();
+                if (stage != null) {
+                    double width = stage.getWidth();
+                    stage.setWidth(width + 0.1);
+                    stage.setWidth(width);
+                }
+
+                System.out.println("Successfully refreshed avatar for user: " + username);
             } catch (Exception ex) {
+                System.out.println("Error refreshing contact avatar: " + ex.getMessage());
                 ex.printStackTrace();
             }
         });
@@ -1632,15 +1658,17 @@ public class ChatSceneController implements Initializable {
             return;
         }
 
-        // Thêm style cho ô tìm kiếm
+        // Thêm style cho ô tìm kiếm với border và màu nền
         txtFieldSearch.setStyle(
-                "-fx-background-color: #f0f2f5;" +
-                        "-fx-background-radius: 20;" +
+                "-fx-background-color: #ffffff;" +
+                        "-fx-background-radius: 5;" +
                         "-fx-padding: 8 12;" +
                         "-fx-font-size: 13px;" +
                         "-fx-prompt-text-fill: #65676b;" +
                         "-fx-text-fill: #050505;" +
-                        "-fx-border-width: 0;" +
+                        "-fx-border-color: #e4e6eb;" +
+                        "-fx-border-radius: 5;" +
+                        "-fx-border-width: 1;" +
                         "-fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 4, 0, 0, 1);");
 
         // Thêm listener để bắt sự kiện khi người dùng gõ vào ô tìm kiếm
@@ -1665,22 +1693,26 @@ public class ChatSceneController implements Initializable {
             if (newValue) { // Khi focus
                 txtFieldSearch.setStyle(
                         "-fx-background-color: #ffffff;" +
-                                "-fx-background-radius: 20;" +
+                                "-fx-background-radius: 5;" +
                                 "-fx-padding: 8 12;" +
                                 "-fx-font-size: 13px;" +
                                 "-fx-prompt-text-fill: #65676b;" +
                                 "-fx-text-fill: #050505;" +
-                                "-fx-border-width: 0;" +
+                                "-fx-border-color: #1877f2;" +
+                                "-fx-border-radius: 5;" +
+                                "-fx-border-width: 2;" +
                                 "-fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.15), 8, 0, 0, 2);");
             } else { // Khi mất focus
                 txtFieldSearch.setStyle(
-                        "-fx-background-color: #f0f2f5;" +
-                                "-fx-background-radius: 20;" +
+                        "-fx-background-color: #ffffff;" +
+                                "-fx-background-radius: 5;" +
                                 "-fx-padding: 8 12;" +
                                 "-fx-font-size: 13px;" +
                                 "-fx-prompt-text-fill: #65676b;" +
                                 "-fx-text-fill: #050505;" +
-                                "-fx-border-width: 0;" +
+                                "-fx-border-color: #e4e6eb;" +
+                                "-fx-border-radius: 5;" +
+                                "-fx-border-width: 1;" +
                                 "-fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 4, 0, 0, 1);");
             }
         });
@@ -1956,5 +1988,14 @@ public class ChatSceneController implements Initializable {
                 ex.printStackTrace();
             }
         });
+    }
+
+    /**
+     * Get the map of chat box controllers for all open tabs
+     * 
+     * @return Map of tab IDs to their corresponding ChatBoxController instances
+     */
+    public Map<String, ChatBoxController> getTabsControllers() {
+        return tabsControllers;
     }
 }
