@@ -91,6 +91,7 @@ public class LoginSceneController implements Initializable {
             stage.show();
             stage.setOnCloseRequest((WindowEvent ew) -> {
                 ///////////////////////////////
+
                 clinetView.logout();
                 clinetView.changeStatus("offline");
                 //////////////////////////

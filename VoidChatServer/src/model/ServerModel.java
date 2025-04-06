@@ -214,7 +214,7 @@ public class ServerModel extends UnicastRemoteObject implements ServerModelInt {
             }
 
             // Only proceed if status is actually changing
-            if (currentStatus == null || !status.equalsIgnoreCase(currentStatus)) {
+            if (!status.equals(currentStatus)) {
                 // Update status in database
                 query = "update UserTable set status='" + status + "' where username= '" + username + "'";
                 statement = connection.createStatement();
@@ -228,33 +228,29 @@ public class ServerModel extends UnicastRemoteObject implements ServerModelInt {
                         ClientModelInt friendClient = controller.getOnlineUsers().get(friend.getUsername());
                         if (friendClient != null) {
                             try {
-                                // Send only one status notification
-                                String notificationMessage = username + " is now " + status.toLowerCase();
-                                int notificationType;
-
+                                // Send immediate status notification
                                 switch (status.toLowerCase()) {
                                     case "online":
-                                        notificationType = Notification.FRIEND_ONLINE;
+                                        friendClient.notify(username + " Become online ", Notification.FRIEND_ONLINE);
                                         break;
                                     case "offline":
-                                        notificationType = Notification.FRIEND_OFFLINE;
+                                        friendClient.notify(username + " Become offline ", Notification.FRIEND_OFFLINE);
                                         break;
                                     case "busy":
-                                        notificationType = Notification.FRIEND_BUSY;
+                                        friendClient.notify(username + " Become busy ", Notification.FRIEND_BUSY);
                                         break;
-                                    default:
-                                        continue;
                                 }
 
-                                // Send a single notification
-                                friendClient.notify(notificationMessage, notificationType);
+                                // Force a refresh of the friend's contact list
+                                friendClient.notify("REFRESH_CONTACTS", Notification.GENERAL);
 
-                                // Update UI without additional notification
+                                // Also notify about the specific user's status change
                                 friendClient.notify("STATUS_UPDATE:" + username + ":" + status,
                                         Notification.STATUS_UPDATE);
                             } catch (RemoteException ex) {
                                 System.out.println("Failed to notify " + friend.getUsername() + " about status change: "
                                         + ex.getMessage());
+                                // Remove disconnected client
                                 controller.unregister(friend.getUsername());
                             }
                         }
