@@ -291,16 +291,8 @@ public class ServerController implements ServerControllerInt {
     public void updateUser(User user) throws RemoteException {
         try {
             model.updateUser(user);
-
-            // Notify all online users about the avatar update
-            Set<String> onlineSet = onlineUsers.keySet();
-            for (String username : onlineSet) {
-                try {
-                    onlineUsers.get(username).receiveAvatarUpdate(user.getUsername());
-                } catch (RemoteException ex) {
-                    Logger.getLogger(ServerController.class.getName()).log(Level.SEVERE, null, ex);
-                }
-            }
+            // Notify all clients about the avatar update
+            notifyAvatarUpdate(user.getUsername());
         } catch (RemoteException ex) {
             ex.printStackTrace();
         }

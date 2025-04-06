@@ -511,7 +511,7 @@ public class ChatBoxController implements Initializable {
                 }
                 avatar.setImage(loadImageWithCacheBusting(imagePath));
             } else {
-                avatar.setImage(loadImageWithCacheBusting("/resouces/user_32.png"));
+                avatar.setImage(loadImageWithCacheBusting("/resouces/male.png"));
             }
 
             makeCircularImage(avatar, 16);
@@ -593,7 +593,7 @@ public class ChatBoxController implements Initializable {
                 }
                 avatar.setImage(loadImageWithCacheBusting(imagePath));
             } else {
-                avatar.setImage(loadImageWithCacheBusting("/resouces/user_32.png"));
+                avatar.setImage(loadImageWithCacheBusting("/resouces/male.png"));
             }
 
             makeCircularImage(avatar, 16);
@@ -942,7 +942,7 @@ public class ChatBoxController implements Initializable {
                         }
                         avatar.setImage(loadImageWithCacheBusting(imagePath));
                     } else {
-                        avatar.setImage(loadImageWithCacheBusting("/resouces/user_32.png"));
+                        avatar.setImage(loadImageWithCacheBusting("/resouces/male.png"));
                     }
 
                     // Apply circular clipping

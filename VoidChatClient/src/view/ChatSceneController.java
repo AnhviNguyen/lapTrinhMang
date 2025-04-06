@@ -787,7 +787,7 @@ public class ChatSceneController implements Initializable {
             } else {
                 // Load default avatar based on gender
                 String defaultPath = friend.getGender() != null &&
-                        friend.getGender().equalsIgnoreCase("Female") ? "/resouces/female.png" : "/resouces/user.png";
+                        friend.getGender().equalsIgnoreCase("Female") ? "/resouces/female.png" : "/resouces/male.png";
 
                 String fullPath = getClass().getResource(defaultPath).toExternalForm() +
                         "?t=" + System.currentTimeMillis();
@@ -815,7 +815,8 @@ public class ChatSceneController implements Initializable {
         } catch (Exception e) {
             System.out.println("Error loading avatar for " + friend.getUsername() + ": " + e.getMessage());
             try {
-                imageView.setImage(new Image(getClass().getResource("/resouces/user.png").toExternalForm(), true));
+                imageView.setImage(new Image(getClass().getResource("/resouces/male.png").toExternalForm() +
+                        "?t=" + System.currentTimeMillis()));
 
                 // Create circular clip for default image
                 Circle clip = new Circle(17.5);
@@ -915,11 +916,12 @@ public class ChatSceneController implements Initializable {
                     }
                     avatar.setImage(new Image(imagePath));
                 } else {
-                    String defaultPath = (user != null && user.getGender() != null &&
+                    String genderImage = (user.getGender() != null &&
                             user.getGender().equalsIgnoreCase("Female")) ? "/resouces/female.png"
-                                    : "/resouces/user.png";
-                    avatar.setImage(new Image(getClass().getResource(defaultPath).toExternalForm() +
-                            "?t=" + System.currentTimeMillis()));
+                                    : "/resouces/male.png";
+
+                    avatar.setImage(new Image(getClass().getResource(genderImage).toExternalForm() +
+                            "?t=" + System.currentTimeMillis(), 20, 20, true, true));
                 }
 
                 // Make avatar circular
@@ -931,7 +933,8 @@ public class ChatSceneController implements Initializable {
             } catch (Exception e) {
                 System.out.println("Error loading avatar: " + e.getMessage());
                 try {
-                    avatar.setImage(new Image(getClass().getResource("/resouces/user.png").toExternalForm()));
+                    avatar.setImage(new Image(getClass().getResource("/resouces/male.png").toExternalForm() +
+                            "?t=" + System.currentTimeMillis()));
                     Circle clip = new Circle(10);
                     clip.setCenterX(10);
                     clip.setCenterY(10);
@@ -1125,7 +1128,7 @@ public class ChatSceneController implements Initializable {
                                         + e.getMessage());
                         try {
                             // Load default as fallback
-                            avatar.setImage(new Image(getClass().getResource("/resouces/user.png").toExternalForm() +
+                            avatar.setImage(new Image(getClass().getResource("/resouces/male.png").toExternalForm() +
                                     "?t=" + System.currentTimeMillis()));
                         } catch (Exception ex) {
                             System.out.println("Failed to load fallback avatar");
@@ -1342,7 +1345,7 @@ public class ChatSceneController implements Initializable {
                         try {
                             String genderImage = (user.getGender() != null &&
                                     user.getGender().equalsIgnoreCase("Female")) ? "/resouces/female.png"
-                                            : "/resouces/user.png";
+                                            : "/resouces/male.png";
 
                             avatarImage = new Image(getClass().getResource(genderImage).toExternalForm() +
                                     "?t=" + System.currentTimeMillis(), 20, 20, true, true);
@@ -1486,7 +1489,7 @@ public class ChatSceneController implements Initializable {
                                 } else {
                                     String genderPath = friend.getGender() != null &&
                                             friend.getGender().equalsIgnoreCase("Female") ? "/resouces/female.png"
-                                                    : "/resouces/user.png";
+                                                    : "/resouces/male.png";
 
                                     String fullPath = getClass().getResource(genderPath).toExternalForm() +
                                             "?t=" + System.currentTimeMillis();
@@ -1809,7 +1812,8 @@ public class ChatSceneController implements Initializable {
                     } catch (Exception e) {
                         System.out.println("Error loading avatar: " + e.getMessage());
                         try {
-                            avatar.setImage(new Image(getClass().getResource("/resouces/user.png").toExternalForm()));
+                            avatar.setImage(new Image(getClass().getResource("/resouces/male.png").toExternalForm() +
+                                    "?t=" + System.currentTimeMillis()));
                             Circle clip = new Circle(20);
                             clip.setCenterX(20);
                             clip.setCenterY(20);
