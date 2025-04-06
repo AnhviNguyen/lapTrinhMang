@@ -711,4 +711,19 @@ public class ServerModel extends UnicastRemoteObject implements ServerModelInt {
             return null;
         }
     }
+
+    @Override
+    public synchronized void sendVoiceMessage(String sender, String receiver, VoiceMessage voiceMessage)
+            throws RemoteException {
+        System.out.println(
+                "ServerModel: Received voice message from " + sender + " to " + receiver);
+        try {
+            controller.sendVoiceMessage(voiceMessage);
+            System.out.println("ServerModel: Successfully forwarded voice message to controller");
+        } catch (Exception e) {
+            System.err.println("ServerModel: Error sending voice message: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
+    }
 }

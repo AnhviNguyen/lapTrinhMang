@@ -188,4 +188,14 @@ public interface ServerModelInt extends Remote {
    * @throws RemoteException
    */
   User refreshUser(String username) throws RemoteException;
+
+  /**
+   * Send voice message to another user
+   * 
+   * @param sender       The username of the sender
+   * @param receiver     The username of the receiver
+   * @param voiceMessage The voice message to send
+   * @throws RemoteException If there is an error during remote communication
+   */
+  void sendVoiceMessage(String sender, String receiver, VoiceMessage voiceMessage) throws RemoteException;
 }

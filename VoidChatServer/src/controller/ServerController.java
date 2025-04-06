@@ -10,7 +10,14 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Application;
-import model.*;
+import model.ClientModelInt;
+import model.MailModel;
+import model.Message;
+import model.ServerModel;
+import model.ServerPrivateModel;
+import model.User;
+import model.UserFx;
+import model.VoiceMessage;
 import utilitez.Pair;
 import view.ServerView;
 
@@ -443,6 +450,46 @@ public class ServerController implements ServerControllerInt {
         } catch (Exception ex) {
             System.out.println("Error broadcasting avatar update: " + ex.getMessage());
             ex.printStackTrace();
+        }
+    }
+
+    @Override
+    public void sendVoiceMessage(VoiceMessage voiceMessage) throws RemoteException {
+        String receiver = voiceMessage.getTo();
+
+        // Handle group voice messages
+        if (receiver.contains("##")) {
+            if (groups.containsKey(receiver)) {
+                ArrayList<String> chatMembers = groups.get(receiver);
+
+                for (String member : chatMembers) {
+                    if (!member.equals(voiceMessage.getFrom())) {
+                        if (onlineUsers.containsKey(member)) {
+                            try {
+                                ClientModelInt clientObject = onlineUsers.get(member);
+                                clientObject.receiveVoiceMessage(voiceMessage);
+                            } catch (RemoteException ex) {
+                                Logger.getLogger(ServerController.class.getName()).log(Level.SEVERE,
+                                        "Failed to send voice message to " + member, ex);
+                                // Remove failed client
+                                onlineUsers.remove(member);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // Handle direct voice messages
+        else if (onlineUsers.containsKey(receiver)) {
+            try {
+                ClientModelInt clientObject = onlineUsers.get(receiver);
+                clientObject.receiveVoiceMessage(voiceMessage);
+            } catch (RemoteException ex) {
+                Logger.getLogger(ServerController.class.getName()).log(Level.SEVERE,
+                        "Failed to send voice message to " + receiver, ex);
+                // Remove failed client
+                onlineUsers.remove(receiver);
+            }
         }
     }
 

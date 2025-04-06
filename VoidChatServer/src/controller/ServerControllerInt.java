@@ -5,8 +5,8 @@ import java.util.ArrayList;
 import model.ClientModelInt;
 import model.Message;
 import model.User;
+import model.VoiceMessage;
 import utilitez.Notification;
-import utilitez.Pair;
 
 public interface ServerControllerInt extends Notification {
 
@@ -85,9 +85,9 @@ public interface ServerControllerInt extends Notification {
    */
   boolean sendMail(String to, String subject, String emailBody);
 
-    void updateUser(User user) throws RemoteException;
+  void updateUser(User user) throws RemoteException;
 
-    void loadErrorServer();
+  void loadErrorServer();
 
   /**
    * Notify all clients that a user has updated their avatar
@@ -96,5 +96,13 @@ public interface ServerControllerInt extends Notification {
    * @param username The username of the user who updated their avatar
    */
   void notifyAvatarUpdate(String username);
+
+  /**
+   * Send a voice message to a user or group
+   * 
+   * @param voiceMessage The voice message to send
+   * @throws RemoteException If there is an error during remote communication
+   */
+  void sendVoiceMessage(VoiceMessage voiceMessage) throws RemoteException;
 
 }

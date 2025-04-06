@@ -66,4 +66,12 @@ public interface ClientModelInt extends Remote {
      */
     void receiveAvatarUpdate(String username) throws RemoteException;
 
+    /**
+     * Receive a voice message from another user
+     * 
+     * @param voiceMessage The voice message to receive
+     * @throws RemoteException If there is an error during remote communication
+     */
+    void receiveVoiceMessage(VoiceMessage voiceMessage) throws RemoteException;
+
 }
