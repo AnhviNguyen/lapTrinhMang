@@ -479,6 +479,7 @@
     -fx-border-color: transparent;
     -fx-font-size: 14px;
     -fx-padding: 4px;
+    -fx-cursor: hand;
 }
 
 .status-combobox:hover {
@@ -493,8 +494,20 @@
     -fx-background-color: white;
     -fx-border-color: #e4e6eb;
     -fx-border-radius: 6px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 5, 0, 0, 2);
 }
 
 .status-combobox .list-cell:hover {
     -fx-background-color: rgba(0, 0, 0, 0.05);
+    -fx-cursor: hand;
+}
+
+/* Style for the arrow of the combo box */
+.status-combobox .arrow-button {
+    -fx-background-color: transparent;
+}
+
+/* Hide combobox arrow when showing the popup */
+.status-combobox:showing .arrow-button .arrow {
+    -fx-opacity: 0;
 } 

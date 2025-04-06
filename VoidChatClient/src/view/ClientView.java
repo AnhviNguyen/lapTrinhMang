@@ -101,27 +101,33 @@ public class ClientView extends Application implements ClientViewInt {
 
     @Override
     public void changeStatus(String status) {
-        // Update local UI immediately first
-        Platform.runLater(() -> {
-            // Update status in chat scene if it's open
-            if (chatSceneController != null) {
-                chatSceneController.updateContactStatus(getUserInformation().getUsername(), status);
-                // Update the status dropdown in the UI
-                chatSceneController.updateStatusDropdown(status);
-            }
+        // Only proceed if the status is actually changing from the current user's
+        // status
+        User currentUser = getUserInformation();
+        if (currentUser != null && !status.equals(currentUser.getStatus())) {
+            // Update user information locally first to prevent feedback loop
+            currentUser.setStatus(status);
 
-            // Update any open chat boxes
-            if (tabsControllers != null) {
-                for (ChatBoxController controller : tabsControllers.values()) {
-                    if (controller != null) {
-                        controller.updateFriendStatus(getUserInformation().getUsername(), status);
+            // Update local UI immediately
+            Platform.runLater(() -> {
+                // Update status in chat scene if it's open
+                if (chatSceneController != null) {
+                    chatSceneController.updateContactStatus(getUserInformation().getUsername(), status);
+                }
+
+                // Update any open chat boxes
+                if (tabsControllers != null) {
+                    for (ChatBoxController controller : tabsControllers.values()) {
+                        if (controller != null) {
+                            controller.updateFriendStatus(getUserInformation().getUsername(), status);
+                        }
                     }
                 }
-            }
-        });
+            });
 
-        // Then notify server to update other clients
-        controller.changeStatus(status);
+            // Then notify server to update other clients
+            controller.changeStatus(status);
+        }
     }
     /////////////////////////////////////////////////////////////////////
 
@@ -603,26 +609,33 @@ public class ClientView extends Application implements ClientViewInt {
     }
 
     public void updateUserStatus(String username, String status) {
-        // Update status in the UI immediately
-        Platform.runLater(() -> {
-            // Update status in chat scene if it's open
-            if (chatSceneController != null) {
-                chatSceneController.updateContactStatus(username, status);
-                // If this is the current user, update the status dropdown
-                if (username.equals(getUserInformation().getUsername())) {
-                    chatSceneController.updateStatusDropdown(status);
+        // Chỉ cập nhật UI nếu đây là status của người dùng khác
+        User currentUser = getUserInformation();
+        if (currentUser != null && !username.equals(currentUser.getUsername())) {
+            // Update status in the UI immediately
+            Platform.runLater(() -> {
+                // Update status in chat scene if it's open
+                if (chatSceneController != null) {
+                    chatSceneController.updateContactStatus(username, status);
                 }
-            }
 
-            // Update status in any open chat boxes
-            if (tabsControllers != null) {
-                for (ChatBoxController controller : tabsControllers.values()) {
-                    if (controller != null) {
-                        controller.updateFriendStatus(username, status);
+                // Update status in any open chat boxes
+                if (tabsControllers != null) {
+                    for (ChatBoxController controller : tabsControllers.values()) {
+                        if (controller != null) {
+                            controller.updateFriendStatus(username, status);
+                        }
                     }
                 }
-            }
-        });
+            });
+        } else if (currentUser != null && username.equals(currentUser.getUsername())) {
+            // Đây là status của người dùng hiện tại, cập nhật dropdown status
+            Platform.runLater(() -> {
+                if (chatSceneController != null) {
+                    chatSceneController.updateStatusDropdown(status);
+                }
+            });
+        }
     }
 
     public void addChatBoxController(String username, ChatBoxController controller) {

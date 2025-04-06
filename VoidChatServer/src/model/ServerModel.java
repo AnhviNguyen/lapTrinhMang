@@ -212,13 +212,17 @@ public class ServerModel extends UnicastRemoteObject implements ServerModelInt {
             if (resultSet.next()) {
                 currentStatus = resultSet.getString("status");
             }
+            statement.close();
 
             // Only proceed if status is actually changing
-            if (!status.equals(currentStatus)) {
+            if (currentStatus == null || !status.equals(currentStatus)) {
                 // Update status in database
-                query = "update UserTable set status='" + status + "' where username= '" + username + "'";
-                statement = connection.createStatement();
-                statement.executeUpdate(query);
+                query = "update UserTable set status=? where username=?";
+                preparedStatement = connection.prepareStatement(query);
+                preparedStatement.setString(1, status);
+                preparedStatement.setString(2, username);
+                preparedStatement.executeUpdate();
+                preparedStatement.close();
 
                 // Get all friends of the user
                 ArrayList<User> userFriends = getContacts(username);
@@ -228,7 +232,7 @@ public class ServerModel extends UnicastRemoteObject implements ServerModelInt {
                         ClientModelInt friendClient = controller.getOnlineUsers().get(friend.getUsername());
                         if (friendClient != null) {
                             try {
-                                // Send immediate status notification
+                                // Send immediate status notification only if status changed
                                 switch (status.toLowerCase()) {
                                     case "online":
                                         friendClient.notify(username + " Become online ", Notification.FRIEND_ONLINE);
@@ -243,10 +247,6 @@ public class ServerModel extends UnicastRemoteObject implements ServerModelInt {
 
                                 // Force a refresh of the friend's contact list
                                 friendClient.notify("REFRESH_CONTACTS", Notification.GENERAL);
-
-                                // Also notify about the specific user's status change
-                                friendClient.notify("STATUS_UPDATE:" + username + ":" + status,
-                                        Notification.STATUS_UPDATE);
                             } catch (RemoteException ex) {
                                 System.out.println("Failed to notify " + friend.getUsername() + " about status change: "
                                         + ex.getMessage());

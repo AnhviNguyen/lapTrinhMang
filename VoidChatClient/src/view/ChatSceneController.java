@@ -116,6 +116,10 @@ public class ChatSceneController implements Initializable {
 
     ObservableList<String> statusList = FXCollections.observableArrayList("online", "offline", "busy");
 
+    // Biến để theo dõi trạng thái hiện tại và ngăn chặn vòng lặp cập nhật
+    private String currentSelectedStatus = null;
+    private boolean isStatusBeingUpdated = false;
+
     private ClientView clinetView;
 
     @FXML
@@ -178,14 +182,40 @@ public class ChatSceneController implements Initializable {
         // Initialize status combo box
         comboBoxStatus.setItems(FXCollections.observableArrayList("online", "offline", "busy"));
 
+        // Set initial status from user info
+        if (clinetView != null && clinetView.getUserInformation() != null) {
+            String currentStatus = clinetView.getUserInformation().getStatus();
+            if (currentStatus != null) {
+                currentSelectedStatus = currentStatus;
+                comboBoxStatus.setValue(currentStatus);
+                updateStatusStyle(currentStatus);
+            }
+        }
+
         // Add listener for status changes
-        comboBoxStatus.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue != null && !newValue.equals(oldValue)) {
-                // Update UI immediately
-                updateStatusDropdown(newValue);
+        comboBoxStatus.valueProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue != null && !newValue.equals(oldValue) && !isStatusBeingUpdated) {
+                // Lưu trạng thái đã chọn
+                currentSelectedStatus = newValue;
+
+                // Update the style immediately
+                updateStatusStyle(newValue);
 
                 // Notify server about status change
-                clinetView.changeStatus(newValue);
+                if (clinetView != null) {
+                    // Bật cờ để ngăn vòng lặp cập nhật
+                    isStatusBeingUpdated = true;
+                    clinetView.changeStatus(newValue);
+                    // Tắt cờ sau khi hoàn thành
+                    isStatusBeingUpdated = false;
+                }
+
+                // Force the ComboBox to lose focus to close the dropdown
+                Platform.runLater(() -> {
+                    comboBoxStatus.hide();
+                    // Shift focus away from the combobox
+                    comboBoxStatus.getParent().requestFocus();
+                });
             }
         });
     }
@@ -2069,23 +2099,43 @@ public class ChatSceneController implements Initializable {
         });
     }
 
+    private void updateStatusStyle(String status) {
+        if (comboBoxStatus != null) {
+            // Remove all existing status styles
+            comboBoxStatus.getStyleClass().removeAll("status-online", "status-offline", "status-busy");
+
+            // Add appropriate style class
+            switch (status.toLowerCase()) {
+                case "online":
+                    comboBoxStatus.getStyleClass().add("status-online");
+                    break;
+                case "offline":
+                    comboBoxStatus.getStyleClass().add("status-offline");
+                    break;
+                case "busy":
+                    comboBoxStatus.getStyleClass().add("status-busy");
+                    break;
+            }
+        }
+    }
+
     public void updateStatusDropdown(String status) {
         Platform.runLater(() -> {
-            if (comboBoxStatus != null) {
-                comboBoxStatus.setValue(status);
+            if (comboBoxStatus != null && status != null) {
+                // Chỉ cập nhật nếu trạng thái khác với trạng thái hiện tại
+                // và dropdown không đang hiển thị và không đang trong quá trình cập nhật
+                if (!status.equals(comboBoxStatus.getValue()) &&
+                        !comboBoxStatus.isShowing() &&
+                        !isStatusBeingUpdated) {
 
-                // Update the style of the ComboBox based on status
-                comboBoxStatus.getStyleClass().removeAll("status-online", "status-offline", "status-busy");
-                switch (status.toLowerCase()) {
-                    case "online":
-                        comboBoxStatus.getStyleClass().add("status-online");
-                        break;
-                    case "offline":
-                        comboBoxStatus.getStyleClass().add("status-offline");
-                        break;
-                    case "busy":
-                        comboBoxStatus.getStyleClass().add("status-busy");
-                        break;
+                    // Chỉ cập nhật nếu người dùng không đang chọn trạng thái khác
+                    if (currentSelectedStatus == null || status.equals(currentSelectedStatus)) {
+                        isStatusBeingUpdated = true;
+                        comboBoxStatus.setValue(status);
+                        updateStatusStyle(status);
+                        currentSelectedStatus = status;
+                        isStatusBeingUpdated = false;
+                    }
                 }
             }
         });

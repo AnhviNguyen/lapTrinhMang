@@ -105,7 +105,7 @@
             </HBox>
           </graphic>
         </Button>
-        <ComboBox fx:id="comboBoxStatus" prefWidth="100.0" style="-fx-background-color: rgba(255,255,255,0.2); -fx-background-radius: 4; -fx-text-fill: white;" />
+        <ComboBox fx:id="comboBoxStatus" prefWidth="100.0" styleClass="status-combobox" style="-fx-background-color: rgba(255,255,255,0.2); -fx-background-radius: 4; -fx-text-fill: white;" />
         <Button fx:id="btnLogout" onAction="#btnLogoutAction" style="-fx-background-color: rgba(255,255,255,0.2); -fx-text-fill: white; -fx-background-radius: 4;" text="Logout" />
       </HBox>
     </HBox>
