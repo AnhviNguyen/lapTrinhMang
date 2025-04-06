@@ -287,12 +287,23 @@ public class ServerController implements ServerControllerInt {
         return null;
     }
 
+    @Override
     public void updateUser(User user) throws RemoteException {
-        model.updateUser(user);
+        try {
+            model.updateUser(user);
 
-        // Notify all clients that this user has updated their avatar
-        notifyAvatarUpdate(user.getUsername());
-        System.out.println("User " + user.getUsername() + " updated profile, notifying all clients");
+            // Notify all online users about the avatar update
+            Set<String> onlineSet = onlineUsers.keySet();
+            for (String username : onlineSet) {
+                try {
+                    onlineUsers.get(username).receiveAvatarUpdate(user.getUsername());
+                } catch (RemoteException ex) {
+                    Logger.getLogger(ServerController.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        } catch (RemoteException ex) {
+            ex.printStackTrace();
+        }
     }
 
     public void GenerateUserFX(UserFx user) {

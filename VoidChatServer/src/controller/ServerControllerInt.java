@@ -1,5 +1,6 @@
 package controller;
 
+import java.rmi.RemoteException;
 import java.util.ArrayList;
 import model.ClientModelInt;
 import model.Message;
@@ -84,7 +85,9 @@ public interface ServerControllerInt extends Notification {
    */
   boolean sendMail(String to, String subject, String emailBody);
 
-  void loadErrorServer();
+    void updateUser(User user) throws RemoteException;
+
+    void loadErrorServer();
 
   /**
    * Notify all clients that a user has updated their avatar

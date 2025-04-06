@@ -1,6 +1,9 @@
 package model;
 
 import controller.ClientController;
+import view.ChatSceneController;
+import view.ClientView;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -94,7 +97,17 @@ public class ClientModel extends UnicastRemoteObject implements ClientModelInt, 
      */
     @Override
     public void receiveAvatarUpdate(String username) throws RemoteException {
-        controller.receiveAvatarUpdate(username);
+        try {
+            // Get the ChatSceneController instance
+            ChatSceneController chatController = ClientView.getInstance().getChatSceneController();
+            if (chatController != null) {
+                // Handle the avatar update
+                chatController.handleAvatarUpdate(username);
+            }
+        } catch (Exception ex) {
+            System.out.println("Error handling avatar update notification: " + ex.getMessage());
+            ex.printStackTrace();
+        }
     }
 
     /**

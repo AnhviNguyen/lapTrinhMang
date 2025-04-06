@@ -1925,4 +1925,36 @@ public class ChatSceneController implements Initializable {
             }
         });
     }
+
+    public void handleAvatarUpdate(String username) {
+        Platform.runLater(() -> {
+            try {
+                // Get fresh user data
+                User updatedUser = clinetView.getUser(username);
+                if (updatedUser == null) {
+                    return;
+                }
+
+                // Refresh in open tabs if available
+                if (tabsControllers.containsKey(username)) {
+                    ChatBoxController controller = tabsControllers.get(username);
+                    controller.refreshUserAvatar(username);
+                }
+
+                // Refresh tab icons if this user has an open tab
+                refreshTabAvatar(username);
+
+                // Force contact list to reload with new avatars
+                refreshContacts();
+
+                // Refresh user profile image if it's the current user
+                if (username.equals(clinetView.getUserInformation().getUsername())) {
+                    updateUserProfileImage(updatedUser);
+                }
+            } catch (Exception ex) {
+                System.out.println("Error handling avatar update: " + ex.getMessage());
+                ex.printStackTrace();
+            }
+        });
+    }
 }
