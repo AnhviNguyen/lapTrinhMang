@@ -198,4 +198,6 @@ public interface ServerModelInt extends Remote {
    * @throws RemoteException If there is an error during remote communication
    */
   void sendVoiceMessage(String sender, String receiver, VoiceMessage voiceMessage) throws RemoteException;
+
+  ArrayList<String> getGroups(String username) throws RemoteException;
 }

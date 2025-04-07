@@ -68,12 +68,18 @@
               <ListView fx:id="aListViewFamily" style="-fx-background-color: transparent; -fx-padding: 6;" />
             </content>
           </TitledPane>
+          <TitledPane fx:id="titlePaneGroups" style="-fx-font-weight: bold;" text="Groups">
+            <content>
+              <ListView fx:id="aListViewGroups" style="-fx-background-color: transparent; -fx-padding: 6;" />
+            </content>
+          </TitledPane>
         </panes>
       </Accordion>
       <!-- List views for contacts - hidden by default but available for the controller -->
       <VBox managed="false" visible="false">
         <ListView fx:id="listViewContacts" />
         <ListView fx:id="listViewFamily" />
+        <ListView fx:id="listViewGroups" />
       </VBox>
       <!-- Bottom Actions -->
       <HBox alignment="CENTER" spacing="8.0" style="-fx-padding: 12; -fx-border-color: #f0f2f5; -fx-border-width: 1 0 0 0;">

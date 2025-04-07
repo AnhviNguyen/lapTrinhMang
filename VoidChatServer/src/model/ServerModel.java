@@ -29,6 +29,11 @@ import static utilitez.Notification.ACCEPT_FRIEND_REQUEST;
  */
 public class ServerModel extends UnicastRemoteObject implements ServerModelInt {
 
+    @Override
+    public ArrayList<String> getGroups(String username) throws RemoteException {
+        return null;
+    }
+
     private Connection connection;
     private Statement statement;
     private ResultSet resultSet;
