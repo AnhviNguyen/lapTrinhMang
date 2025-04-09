@@ -18,6 +18,7 @@ import model.ServerPrivateModel;
 import model.User;
 import model.UserFx;
 import model.VoiceMessage;
+import utilitez.Notification;
 import utilitez.Pair;
 import view.ServerView;
 
@@ -216,7 +217,21 @@ public class ServerController implements ServerControllerInt {
 
     @Override
     public void createGroup(String groupName, ArrayList<String> groupMembers) {
-        groups.put(groupName, groupMembers);
+        // Create group in database
+        model.createGroup(groupName, groupMembers);
+
+        // Notify all members about the new group
+        for (String member : groupMembers) {
+            ClientModelInt connection = onlineUsers.get(member);
+            if (connection != null) {
+                try {
+                    // Send group creation notification
+                    connection.notify("GROUP_ADDED:" + groupName, Notification.GENERAL);
+                } catch (RemoteException ex) {
+                    ex.printStackTrace();
+                }
+            }
+        }
     }
 
     @Override

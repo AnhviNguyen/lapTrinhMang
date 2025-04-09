@@ -104,6 +104,12 @@ public class ChatSceneController implements Initializable {
 
     @FXML
     private ListView<User> aListViewFamily;
+
+    @FXML
+    private TitledPane titlePaneGroups;
+
+    @FXML
+    private ListView<String> aListViewGroups; // Change type to String for groups
     // ------end merna----
 
     @FXML
@@ -511,7 +517,8 @@ public class ChatSceneController implements Initializable {
                         // Create new tab
                         Tab newTab = new Tab();
                         newTab.setId(groupName);
-                        newTab.setText(splitString[2]);
+                        // Use the last part of the split string as group name
+                        newTab.setText(splitString[splitString.length - 1]);
                         newTab.setClosable(true);
 
                         // Add icon for tab
@@ -535,14 +542,15 @@ public class ChatSceneController implements Initializable {
                         });
 
                         // Load ChatBox for this group
-                        FXMLLoader loader = new FXMLLoader(getClass().getResource("ChatBox.fxml"));
                         Message message = new Message();
                         message.setTo(groupName);
-                        ChatBoxController chatBoxController = new ChatBoxController(message);
-                        loader.setController(chatBoxController);
+                        FXMLLoader loader = new FXMLLoader(getClass().getResource("ChatBox.fxml"));
+                        Parent root = loader.load();
+                        ChatBoxController chatBoxController = loader.getController();
+                        chatBoxController.initializeWithMessage(message);
 
                         // Set content and store references
-                        newTab.setContent(loader.load());
+                        newTab.setContent(root);
                         tabsOpened.put(groupName, newTab);
                         tabsControllers.put(groupName, chatBoxController);
 
@@ -715,11 +723,14 @@ public class ChatSceneController implements Initializable {
     void loadAccordionData() {
         Platform.runLater(() -> {
             ArrayList<utilitez.Pair> allContact = clinetView.getContactsWithType();
+            ArrayList<String> groups = new ArrayList<>(); // Initialize empty groups list
 
             if (allContact != null) {
                 ObservableList<User> friendsList = FXCollections.observableArrayList();
                 ObservableList<User> familyList = FXCollections.observableArrayList();
+                ObservableList<String> groupsList = FXCollections.observableArrayList();
 
+                // Load contacts
                 for (utilitez.Pair contact : allContact) {
                     User user = (User) contact.getFirst();
                     String type = (String) contact.getSecond();
@@ -731,6 +742,12 @@ public class ChatSceneController implements Initializable {
                     }
                 }
 
+                // Load groups
+                if (groups != null) {
+                    groupsList.addAll(groups);
+                }
+
+                // Handle Friends list
                 if (friendsList.isEmpty()) {
                     try {
                         Node node = FXMLLoader.load(getClass().getResource("EmptyList.fxml"));
@@ -743,6 +760,7 @@ public class ChatSceneController implements Initializable {
                     aListViewFriends.setItems(friendsList);
                 }
 
+                // Handle Family list
                 if (familyList.isEmpty()) {
                     try {
                         Node node = FXMLLoader.load(getClass().getResource("EmptyList.fxml"));
@@ -753,6 +771,19 @@ public class ChatSceneController implements Initializable {
                 } else {
                     titlePaneFamily.setContent(aListViewFamily);
                     aListViewFamily.setItems(familyList);
+                }
+
+                // Handle Groups list
+                if (groupsList.isEmpty()) {
+                    try {
+                        Node node = FXMLLoader.load(getClass().getResource("EmptyList.fxml"));
+                        titlePaneGroups.setContent(node);
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+                } else {
+                    titlePaneGroups.setContent(aListViewGroups);
+                    aListViewGroups.setItems(groupsList);
                 }
 
                 // Set cell factories
@@ -782,6 +813,32 @@ public class ChatSceneController implements Initializable {
                     }
                 });
 
+                aListViewGroups.setCellFactory(listView -> new ListCell<String>() {
+                    @Override
+                    protected void updateItem(String groupName, boolean empty) {
+                        super.updateItem(groupName, empty);
+                        if (empty || groupName == null) {
+                            setText(null);
+                            setGraphic(null);
+                        } else {
+                            HBox cell = new HBox(10);
+                            cell.setAlignment(Pos.CENTER_LEFT);
+                            cell.setPadding(new Insets(5));
+
+                            ImageView groupIcon = new ImageView(
+                                    new Image(getClass().getResourceAsStream("../resouces/group.png")));
+                            groupIcon.setFitHeight(30);
+                            groupIcon.setFitWidth(30);
+
+                            Label nameLabel = new Label(groupName);
+                            nameLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+
+                            cell.getChildren().addAll(groupIcon, nameLabel);
+                            setGraphic(cell);
+                        }
+                    }
+                });
+
                 // Add click handlers
                 aListViewFriends.setOnMouseClicked(event -> {
                     User selectedUser = aListViewFriends.getSelectionModel().getSelectedItem();
@@ -794,6 +851,13 @@ public class ChatSceneController implements Initializable {
                     User selectedUser = aListViewFamily.getSelectionModel().getSelectedItem();
                     if (selectedUser != null) {
                         cellClickAction(event, selectedUser.getUsername());
+                    }
+                });
+
+                aListViewGroups.setOnMouseClicked(event -> {
+                    String selectedGroup = aListViewGroups.getSelectionModel().getSelectedItem();
+                    if (selectedGroup != null) {
+                        cellClickAction(event, selectedGroup);
                     }
                 });
             }

@@ -2440,4 +2440,20 @@ public class ChatBoxController implements Initializable {
             });
         }
     }
+
+    public void initializeWithMessage(Message message) {
+        this.message = message;
+        // Initialize other necessary components
+        if (message.getTo().contains("##")) {
+            // This is a group chat
+            String[] groupInfo = message.getTo().split("##");
+            labelFriendName.setText(groupInfo[1]); // Set group name
+            labelFriendStatus.setText("Group Chat");
+            try {
+                imgFriendStatus.setImage(new Image(getClass().getResource("/resouces/group.png").openStream()));
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
 }

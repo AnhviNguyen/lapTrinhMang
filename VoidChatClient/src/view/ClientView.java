@@ -162,7 +162,6 @@ public class ClientView extends Application implements ClientViewInt {
                     showFriendBusy(message);
                     break;
                 case Notification.STATUS_UPDATE:
-                    // Handle immediate status update notification
                     String[] parts = message.split(":");
                     if (parts.length == 3 && parts[0].equals("STATUS_UPDATE")) {
                         String username = parts[1];
@@ -171,7 +170,15 @@ public class ClientView extends Application implements ClientViewInt {
                     }
                     break;
                 case Notification.GENERAL:
-                    if (message.equals("REFRESH_CONTACTS")) {
+                    if (message.startsWith("GROUP_ADDED:")) {
+                        // Extract group name from message
+                        String groupName = message.substring("GROUP_ADDED:".length());
+                        // Create group UI for this member
+                        if (chatSceneController != null) {
+                            chatSceneController.createGroup(groupName);
+                        }
+                        showSuccess("New Group", "Group Invitation", "You have been added to group: " + groupName);
+                    } else if (message.equals("REFRESH_CONTACTS")) {
                         refreshContacts();
                     }
                     break;
@@ -291,7 +298,25 @@ public class ClientView extends Application implements ClientViewInt {
 
     @Override
     public void createGroup(String groupName, ArrayList<String> groupMembers) {
+        // Create group on server via RMI
         controller.createGroup(groupName, groupMembers);
+
+        // Create group locally for current user
+        if (chatSceneController != null) {
+            chatSceneController.createGroup(groupName);
+        }
+
+        // Notify all members about the new group
+        for (String member : groupMembers) {
+            if (!member.equals(getUserInformation().getUsername())) {
+                // Send notification to other members
+                Message groupNotification = new Message();
+                groupNotification.setTo(member);
+                groupNotification.setFrom("System");
+                groupNotification.setBody("You have been added to group: " + groupName);
+                controller.sendMsg(groupNotification);
+            }
+        }
     }
 
     @Override

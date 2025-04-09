@@ -45,7 +45,7 @@ public class GroupSceneController implements Initializable {
     ArrayList<String> groupMembers = new ArrayList<>();
 
     public GroupSceneController() {
-        //get instance form view
+        // get instance form view
         clinetView = ClientView.getInstance();
     }
 
@@ -62,7 +62,7 @@ public class GroupSceneController implements Initializable {
                 contactsName.add(contact.getUsername());
             }
         }
-        //set it within the last if .. this just for test
+        // set it within the last if .. this just for test
         ObservableList<String> data = FXCollections.observableArrayList(contactsName);
         listviewGroup.setItems(data);
         listviewGroup.setCellFactory(listView -> new ListCell<String>() {
@@ -94,22 +94,38 @@ public class GroupSceneController implements Initializable {
 
     @FXML
     void btnCreateAction(ActionEvent event) {
-////////////////////
-//        String groupName = "group##" + clinetView.getUserInformation().getUsername() + "##" + txtFieldGroupName.getText();
-         String groupName = "group##" + new Date().toString() + "##" + txtFieldGroupName.getText();
-///////////////////        
+        if (txtFieldGroupName.getText().trim().isEmpty()) {
+            txtErrorGroupName.setText("Please enter a group name");
+            txtErrorGroupName.setVisible(true);
+            return;
+        }
 
+        if (groupMembers.isEmpty()) {
+            txtErrorGroupName.setText("Please select at least one member");
+            txtErrorGroupName.setVisible(true);
+            return;
+        }
 
+        // Format group name with prefix
+        String groupName = "##" + txtFieldGroupName.getText();
+
+        // Add current user to group if not already included
+        String currentUser = clinetView.getUserInformation().getUsername();
+        if (!groupMembers.contains(currentUser)) {
+            groupMembers.add(currentUser);
+        }
+
+        // Create group in chat scene
         clinetView.chatSceneController.createGroup(groupName);
-        groupMembers.add(clinetView.getUserInformation().getUsername());
+
+        // Create group with RMI
         if (!clinetView.chatSceneController.tabsOpened.containsKey(groupName)) {
             clinetView.createGroup(groupName, groupMembers);
             ((Node) (event.getSource())).getScene().getWindow().hide();
         } else {
-            //3ayzen n3ml notification hna 2n fe group b nfs 2l 2sm
+            txtErrorGroupName.setText("A group with this name already exists");
             txtErrorGroupName.setVisible(true);
         }
-
     }
 
 }

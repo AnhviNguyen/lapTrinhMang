@@ -489,15 +489,38 @@ public class ServerModel extends UnicastRemoteObject implements ServerModelInt {
     @Override
     public synchronized void createGroup(String groupName, ArrayList<String> groupMembers) {
         try {
-            // Instead of database operations, just forward to controller
-            controller.createGroup(groupName, groupMembers);
+            // Create group in database
+            query = "INSERT INTO groups (group_name) VALUES (?)";
+            preparedStatement = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
+            preparedStatement.setString(1, groupName);
+            preparedStatement.executeUpdate();
+
+            // Get the generated group ID
+            ResultSet rs = preparedStatement.getGeneratedKeys();
+            int groupId = -1;
+            if (rs.next()) {
+                groupId = rs.getInt(1);
+            }
+
+            // Add members to the group
+            query = "INSERT INTO group_members (group_id, username) VALUES (?, ?)";
+            preparedStatement = connection.prepareStatement(query);
+            for (String member : groupMembers) {
+                preparedStatement.setInt(1, groupId);
+                preparedStatement.setString(2, member);
+                preparedStatement.executeUpdate();
+            }
 
             // Notify each member about the new group
             for (String member : groupMembers) {
                 notify(member, "You've been added to group: " + groupName, Notification.GENERAL);
             }
-        } catch (RemoteException ex) {
-            ex.printStackTrace();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } catch (RemoteException e) {
+            throw new RuntimeException(e);
+        } finally {
+            closeResources();
         }
     }
 
