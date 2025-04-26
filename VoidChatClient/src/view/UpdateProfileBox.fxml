@@ -47,18 +47,18 @@
           <!-- First Name -->
           <VBox spacing="5.0" HBox.hgrow="ALWAYS">
             <Label style="-fx-font-weight: bold; -fx-font-size: 12;" text="First Name" />
-            <TextField fx:id="txtFname" promptText="First name" style="-fx-background-color: #f0f2f5; -fx-padding: 8; -fx-background-radius: 4;" />
+            <TextField fx:id="txtFname" promptText="First name" styleClass="text-field" />
           </VBox>
           <!-- Last Name -->
           <VBox spacing="5.0" HBox.hgrow="ALWAYS">
             <Label style="-fx-font-weight: bold; -fx-font-size: 12;" text="Last Name" />
-            <TextField fx:id="txtLname" promptText="Last name" style="-fx-background-color: #f0f2f5; -fx-padding: 8; -fx-background-radius: 4;" />
+            <TextField fx:id="txtLname" promptText="Last name" styleClass="text-field" />
           </VBox>
         </HBox>
         <!-- Email -->
         <VBox spacing="5.0">
           <Label style="-fx-font-weight: bold; -fx-font-size: 12;" text="Email Address" />
-          <TextField fx:id="txtEmail" promptText="Email address" style="-fx-background-color: #f0f2f5; -fx-padding: 8; -fx-background-radius: 4;" />
+          <TextField fx:id="txtEmail" promptText="Email address" styleClass="text-field" />
         </VBox>
         <!-- Gender -->
         <VBox spacing="5.0">

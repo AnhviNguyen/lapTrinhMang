@@ -23,7 +23,7 @@
             
             <!-- Server IP Field -->
             <HBox alignment="CENTER" spacing="8">
-                <TextField fx:id="txtFieldHostIP" prefWidth="200.0" promptText="Server IP" style="-fx-background-color: #f0f2f5; -fx-padding: 8 12; -fx-background-radius: 6;"/>
+                <TextField fx:id="txtFieldHostIP" prefWidth="200.0" promptText="Server IP" styleClass="text-field" />
                 <Button fx:id="btnConnect" onAction="#btnConnectAction" text="Connect" 
                         style="-fx-background-color: #1877f2; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 15; -fx-background-radius: 6;"/>
             </HBox>

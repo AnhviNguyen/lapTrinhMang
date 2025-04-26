@@ -21,35 +21,35 @@
                 <!-- Name Fields -->
                 <HBox spacing="8">
                     <TextField fx:id="txtFName" promptText="First name" prefWidth="176" 
-                             style="-fx-background-color: #f0f2f5; -fx-padding: 8; -fx-background-radius: 4;"/>
+                             style="-fx-background-color: #f0f2f5; -fx-padding: 8; -fx-background-radius: 4; -fx-border-color: #b3b3cc; -fx-border-radius: 4"/>
                     <TextField fx:id="txtLName" promptText="Last name" prefWidth="176"
-                             style="-fx-background-color: #f0f2f5; -fx-padding: 8; -fx-background-radius: 4;"/>
+                             style="-fx-background-color: #f0f2f5; -fx-padding: 8; -fx-background-radius: 4;-fx-border-color: #b3b3cc; -fx-border-radius: 4"/>
                 </HBox>
                 
                 <!-- Username -->
                 <TextField fx:id="txtUserName" promptText="Username" 
-                         style="-fx-background-color: #f0f2f5; -fx-padding: 8; -fx-background-radius: 4;"/>
+                         style="-fx-background-color: #f0f2f5; -fx-padding: 8; -fx-background-radius: 4;-fx-border-color: #b3b3cc; -fx-border-radius: 4"/>
                 
                 <!-- Email -->
                 <TextField fx:id="txtEmail" promptText="Email" 
-                         style="-fx-background-color: #f0f2f5; -fx-padding: 8; -fx-background-radius: 4;"/>
+                         style="-fx-background-color: #f0f2f5; -fx-padding: 8; -fx-background-radius: 4;-fx-border-color: #b3b3cc; -fx-border-radius: 4"/>
                 
                 <!-- Password -->
                 <PasswordField fx:id="txtPassword" promptText="New password"
-                             style="-fx-background-color: #f0f2f5; -fx-padding: 8; -fx-background-radius: 4;"/>
+                             style="-fx-background-color: #f0f2f5; -fx-padding: 8; -fx-background-radius: 4;-fx-border-color: #b3b3cc; -fx-border-radius: 4"/>
                 
                 <!-- Gender -->
                 <VBox spacing="3">
                     <Label text="Gender" style="-fx-font-weight: bold; -fx-text-fill: #606770; -fx-font-size: 12;"/>
                     <ComboBox fx:id="comboboxGender" prefWidth="160" promptText="Select gender"
-                             style="-fx-background-color: #f0f2f5; -fx-padding: 6; -fx-background-radius: 4;"/>
+                             style="-fx-background-color: #f0f2f5; -fx-padding: 6; -fx-background-radius: 4;-fx-border-color: #b3b3cc; -fx-border-radius: 4"/>
                 </VBox>
                 
                 <!-- Country -->
                 <VBox spacing="3">
                     <Label text="Country" style="-fx-font-weight: bold; -fx-text-fill: #606770; -fx-font-size: 12;"/>
                     <ComboBox fx:id="comboboxCountry" prefWidth="160" promptText="Select country"
-                             style="-fx-background-color: #f0f2f5; -fx-padding: 6; -fx-background-radius: 4;"/>
+                             style="-fx-background-color: #f0f2f5; -fx-padding: 6; -fx-background-radius: 4;-fx-border-color: #b3b3cc; -fx-border-radius: 4"/>
                 </VBox>
                 
                 <!-- Terms -->

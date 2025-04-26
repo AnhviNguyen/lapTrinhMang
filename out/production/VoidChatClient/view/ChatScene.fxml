@@ -53,7 +53,7 @@
       </HBox>
       <!-- Search Friends -->
       <HBox style="-fx-padding: 0 12;">
-        <TextField fx:id="txtFieldSearch" prefWidth="240.0" promptText="Search contacts" style="-fx-background-color: #f0f2f5; -fx-background-radius: 16; -fx-padding: 6 12;" />
+        <TextField fx:id="txtFieldSearch" prefWidth="240.0" promptText="Search contacts" styleClass="search-field" />
       </HBox>
       <!-- Friends Accordion -->
       <Accordion style="-fx-padding: 0 6;" VBox.vgrow="ALWAYS">

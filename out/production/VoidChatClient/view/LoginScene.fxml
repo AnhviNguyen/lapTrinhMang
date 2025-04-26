@@ -26,11 +26,11 @@
                 <VBox spacing="12" style="-fx-background-color: white; -fx-padding: 16; -fx-background-radius: 6; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 6, 0, 0, 0);">
                     <!-- Username Field -->
                     <TextField fx:id="txtUserName" promptText="Username" 
-                             style="-fx-background-color: #f0f2f5; -fx-padding: 10; -fx-background-radius: 4; -fx-font-size: 13;"/>
+                             style="-fx-background-color: #f0f2f5; -fx-padding: 10; -fx-font-size: 13; -fx-border-color: #b3b3cc; -fx-border-radius: 4"/>
                     
                     <!-- Password Field -->
                     <PasswordField fx:id="txtPassword" promptText="Password"
-                                 style="-fx-background-color: #f0f2f5; -fx-padding: 10; -fx-background-radius: 4; -fx-font-size: 13;"/>
+                                 style="-fx-background-color: #f0f2f5; -fx-padding: 10; -fx-border-radius: 4; -fx-font-size: 13; -fx-border-color: #b3b3cc"/>
                     
                     <!-- Login Button -->
                     <HBox alignment="CENTER">
