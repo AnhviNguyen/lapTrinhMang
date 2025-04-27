@@ -53,7 +53,7 @@ public class ServerController implements ServerControllerInt {
             // upload to registry
             reg = LocateRegistry.createRegistry(1050);
 
-            serverNotifaction = "Void Chat Team Yor7b bekom :) ";
+            serverNotifaction = "Welcome to comeback!!! :) ";
 
         } catch (RemoteException ex) {
             ex.printStackTrace();
@@ -213,25 +213,6 @@ public class ServerController implements ServerControllerInt {
         }
 
         return null;
-    }
-
-    @Override
-    public void createGroup(String groupName, ArrayList<String> groupMembers) {
-        // Create group in database
-        model.createGroup(groupName, groupMembers);
-
-        // Notify all members about the new group
-        for (String member : groupMembers) {
-            ClientModelInt connection = onlineUsers.get(member);
-            if (connection != null) {
-                try {
-                    // Send group creation notification
-                    connection.notify("GROUP_ADDED:" + groupName, Notification.GENERAL);
-                } catch (RemoteException ex) {
-                    ex.printStackTrace();
-                }
-            }
-        }
     }
 
     @Override

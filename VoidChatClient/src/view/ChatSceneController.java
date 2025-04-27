@@ -105,12 +105,6 @@ public class ChatSceneController implements Initializable {
     @FXML
     private ListView<User> aListViewFamily;
 
-    @FXML
-    private TitledPane titlePaneGroups;
-
-    @FXML
-    private ListView<String> aListViewGroups; // Change type to String for groups
-    // ------end merna----
 
     @FXML
     private Label serverStatusLabel;
@@ -774,17 +768,7 @@ public class ChatSceneController implements Initializable {
                 }
 
                 // Handle Groups list
-                if (groupsList.isEmpty()) {
-                    try {
-                        Node node = FXMLLoader.load(getClass().getResource("EmptyList.fxml"));
-                        titlePaneGroups.setContent(node);
-                    } catch (IOException ex) {
-                        ex.printStackTrace();
-                    }
-                } else {
-                    titlePaneGroups.setContent(aListViewGroups);
-                    aListViewGroups.setItems(groupsList);
-                }
+
 
                 // Set cell factories
                 aListViewFriends.setCellFactory(listView -> new ListCell<User>() {
@@ -813,31 +797,6 @@ public class ChatSceneController implements Initializable {
                     }
                 });
 
-                aListViewGroups.setCellFactory(listView -> new ListCell<String>() {
-                    @Override
-                    protected void updateItem(String groupName, boolean empty) {
-                        super.updateItem(groupName, empty);
-                        if (empty || groupName == null) {
-                            setText(null);
-                            setGraphic(null);
-                        } else {
-                            HBox cell = new HBox(10);
-                            cell.setAlignment(Pos.CENTER_LEFT);
-                            cell.setPadding(new Insets(5));
-
-                            ImageView groupIcon = new ImageView(
-                                    new Image(getClass().getResourceAsStream("../resouces/group.png")));
-                            groupIcon.setFitHeight(30);
-                            groupIcon.setFitWidth(30);
-
-                            Label nameLabel = new Label(groupName);
-                            nameLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
-
-                            cell.getChildren().addAll(groupIcon, nameLabel);
-                            setGraphic(cell);
-                        }
-                    }
-                });
 
                 // Add click handlers
                 aListViewFriends.setOnMouseClicked(event -> {
@@ -854,12 +813,6 @@ public class ChatSceneController implements Initializable {
                     }
                 });
 
-                aListViewGroups.setOnMouseClicked(event -> {
-                    String selectedGroup = aListViewGroups.getSelectionModel().getSelectedItem();
-                    if (selectedGroup != null) {
-                        cellClickAction(event, selectedGroup);
-                    }
-                });
             }
         });
     }
@@ -1780,7 +1733,7 @@ public class ChatSceneController implements Initializable {
                         "-fx-font-size: 13px;" +
                         "-fx-prompt-text-fill: #65676b;" +
                         "-fx-text-fill: #050505;" +
-                        "-fx-border-color: #e4e6eb;" +
+                        "-fx-border-color: #4287f5;" +
                         "-fx-border-radius: 5;" +
                         "-fx-border-width: 1;" +
                         "-fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 4, 0, 0, 1);");

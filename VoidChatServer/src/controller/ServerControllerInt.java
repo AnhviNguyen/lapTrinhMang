@@ -65,7 +65,6 @@ public interface ServerControllerInt extends Notification {
    */
   ClientModelInt getConnection(String Client);
 
-  void createGroup(String groupName, ArrayList<String> groupMembers);
 
   /**
    * send image to sponser
