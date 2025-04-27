@@ -68,6 +68,13 @@ import tray.animations.AnimationType;
 import tray.notification.TrayNotification;
 import utilitez.Constant;
 import utilitez.Notification;
+import java.text.Normalizer;
+import java.util.regex.Pattern;
+import javafx.scene.text.Text;
+import javafx.scene.text.TextFlow;
+import javafx.scene.control.Tooltip;
+import javafx.geometry.Point2D;
+import javafx.scene.input.KeyCode;
 
 /**
  * FXML Controller class
@@ -140,83 +147,599 @@ public class ChatSceneController implements Initializable {
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        updatePageInfo();
-        comboBoxStatus.setItems(statusList);
-
         try {
-            homeBox.setContent(FXMLLoader.load(getClass().getResource("HomeBox.fxml")));
-        } catch (IOException ex) {
-            ex.printStackTrace();
+            System.out.println("=== ChatSceneController initializing ===");
+
+            // Kiểm tra trạng thái ClientView
+            if (clinetView == null) {
+                System.out.println("ERROR: clinetView is null");
+                clinetView = ClientView.getInstance();
+                if (clinetView == null) {
+                    System.out.println("CRITICAL ERROR: Cannot get ClientView instance");
+                    return;
+                } else {
+                    System.out.println("ClientView instance obtained successfully");
+                }
+            }
+
+            // In thông tin về đăng nhập hiện tại
+            User currentUser = clinetView.getUserInformation();
+            if (currentUser != null) {
+                System.out.println("Current logged in user: " + currentUser.getUsername());
+            } else {
+                System.out.println("WARNING: currentUser is null - user might not be logged in");
+            }
+
+            // Kiểm tra kết nối đến server
+            boolean isConnected = clinetView.isConnected();
+            System.out.println("Connection to server: " + (isConnected ? "CONNECTED" : "DISCONNECTED"));
+
+            // Debug: Kiểm tra danh sách liên hệ
+            ArrayList<utilitez.Pair> contacts = clinetView.getContactsWithType();
+            if (contacts != null) {
+                System.out.println("Initial contacts list - Size: " + contacts.size());
+                for (utilitez.Pair contact : contacts) {
+                    User user = (User) contact.getFirst();
+                    String type = (String) contact.getSecond();
+                    System.out.println("   - " + user.getUsername() + " (" + type + ")");
+                }
+            } else {
+                System.out.println("WARNING: Initial contacts list is null");
+            }
+
+            // Tiếp tục với quá trình khởi tạo
+            updatePageInfo();
+            comboBoxStatus.setItems(statusList);
+
+            try {
+                homeBox.setContent(FXMLLoader.load(getClass().getResource("HomeBox.fxml")));
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+
+            updateFriendsRequests();
+
+            // Don't create new ListViews - they are already injected from FXML
+            loadAccordionData();
+
+            // Initialize server status label
+            ClientView.getInstance().serverStatusLabel = serverStatusLabel;
+
+            // Thiết lập chức năng tìm kiếm cho chỉ khi ListView đã được khởi tạo
+            setupSearchField();
+
+            try {
+                // Check if ListView fields are null, if so, initialize them with the accordion
+                // ones
+                if (listViewContacts == null || listViewFamily == null) {
+                    System.out.println("ListView contacts or family is null, initializing using alternative methods");
+                    // Wait until loadAccordionData finishes before refreshing contacts
+                    loadAccordionData();
+                    // Don't call refreshContacts here to avoid the NullPointerException
+                    return;
+                }
+
+                // Only refresh contacts if the ListView fields are not null
+                refreshContacts();
+            } catch (Exception e) {
+                System.out.println("Error during initialization: " + e.getMessage());
+                e.printStackTrace();
+            }
+
+            // Initialize status combo box
+            comboBoxStatus.setItems(FXCollections.observableArrayList("online", "offline", "busy"));
+
+            // Set initial status from user info
+            if (clinetView != null && clinetView.getUserInformation() != null) {
+                String currentStatus = clinetView.getUserInformation().getStatus();
+                if (currentStatus != null) {
+                    currentSelectedStatus = currentStatus;
+                    comboBoxStatus.setValue(currentStatus);
+                    updateStatusStyle(currentStatus);
+                }
+            }
+
+            // Add listener for status changes
+            comboBoxStatus.valueProperty().addListener((observable, oldValue, newValue) -> {
+                if (newValue != null && !newValue.equals(oldValue) && !isStatusBeingUpdated) {
+                    // Lưu trạng thái đã chọn
+                    currentSelectedStatus = newValue;
+
+                    // Update the style immediately
+                    updateStatusStyle(newValue);
+
+                    // Notify server about status change
+                    if (clinetView != null) {
+                        // Bật cờ để ngăn vòng lặp cập nhật
+                        isStatusBeingUpdated = true;
+                        clinetView.changeStatus(newValue);
+                        // Tắt cờ sau khi hoàn thành
+                        isStatusBeingUpdated = false;
+                    }
+
+                    // Force the ComboBox to lose focus to close the dropdown
+                    Platform.runLater(() -> {
+                        comboBoxStatus.hide();
+                        // Shift focus away from the combobox
+                        comboBoxStatus.getParent().requestFocus();
+                    });
+                }
+            });
+        } catch (Exception e) {
+            System.out.println("EXCEPTION in initialize: " + e.getMessage());
+            e.printStackTrace();
         }
+    }
 
-        updateFriendsRequests();
-
-        // Don't create new ListViews - they are already injected from FXML
-        loadAccordionData();
-
-        // Initialize server status label
-        ClientView.getInstance().serverStatusLabel = serverStatusLabel;
-
-        // Thiết lập chức năng tìm kiếm cho chỉ khi ListView đã được khởi tạo
-        setupSearchField();
+    /**
+     * Kiểm tra trạng thái kết nối và dữ liệu
+     * Phương thức này có thể được gọi để chẩn đoán vấn đề
+     */
+    public void debugConnectionAndData() {
+        System.out.println("\n=== DEBUG CONNECTION AND DATA ===");
 
         try {
-            // Check if ListView fields are null, if so, initialize them with the accordion
-            // ones
-            if (listViewContacts == null || listViewFamily == null) {
-                System.out.println("ListView contacts or family is null, initializing using alternative methods");
-                // Wait until loadAccordionData finishes before refreshing contacts
-                loadAccordionData();
-                // Don't call refreshContacts here to avoid the NullPointerException
+            // Kiểm tra ClientView
+            if (clinetView == null) {
+                System.out.println("ERROR: clinetView is null");
                 return;
             }
 
-            // Only refresh contacts if the ListView fields are not null
-            refreshContacts();
-        } catch (Exception e) {
-            System.out.println("Error during initialization: " + e.getMessage());
-            e.printStackTrace();
-        }
+            // Kiểm tra kết nối đến server
+            boolean isConnected = clinetView.isConnected();
+            System.out.println("Connection to server: " + (isConnected ? "CONNECTED" : "DISCONNECTED"));
 
-        // Initialize status combo box
-        comboBoxStatus.setItems(FXCollections.observableArrayList("online", "offline", "busy"));
-
-        // Set initial status from user info
-        if (clinetView != null && clinetView.getUserInformation() != null) {
-            String currentStatus = clinetView.getUserInformation().getStatus();
-            if (currentStatus != null) {
-                currentSelectedStatus = currentStatus;
-                comboBoxStatus.setValue(currentStatus);
-                updateStatusStyle(currentStatus);
+            // Kiểm tra thông tin người dùng hiện tại
+            User currentUser = clinetView.getUserInformation();
+            if (currentUser != null) {
+                System.out.println("Current user: " + currentUser.getUsername());
+                System.out.println("Full name: " + currentUser.getFname() + " " + currentUser.getLname());
+                System.out.println("Status: " + currentUser.getStatus());
+            } else {
+                System.out.println("WARNING: currentUser is null - user might not be logged in");
             }
-        }
 
-        // Add listener for status changes
-        comboBoxStatus.valueProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue != null && !newValue.equals(oldValue) && !isStatusBeingUpdated) {
-                // Lưu trạng thái đã chọn
-                currentSelectedStatus = newValue;
-
-                // Update the style immediately
-                updateStatusStyle(newValue);
-
-                // Notify server about status change
-                if (clinetView != null) {
-                    // Bật cờ để ngăn vòng lặp cập nhật
-                    isStatusBeingUpdated = true;
-                    clinetView.changeStatus(newValue);
-                    // Tắt cờ sau khi hoàn thành
-                    isStatusBeingUpdated = false;
+            // Kiểm tra danh sách liên hệ
+            ArrayList<utilitez.Pair> contacts = clinetView.getContactsWithType();
+            if (contacts != null) {
+                System.out.println("Contacts list - Size: " + contacts.size());
+                for (utilitez.Pair contact : contacts) {
+                    User user = (User) contact.getFirst();
+                    String type = (String) contact.getSecond();
+                    System.out.println("   - " + user.getUsername() + " (" + type + ")");
                 }
 
-                // Force the ComboBox to lose focus to close the dropdown
-                Platform.runLater(() -> {
-                    comboBoxStatus.hide();
-                    // Shift focus away from the combobox
-                    comboBoxStatus.getParent().requestFocus();
-                });
+                // Kiểm tra ListView
+                if (listViewContacts != null && listViewFamily != null) {
+                    System.out.println("ListView states:");
+                    System.out.println("   - listViewContacts items: " + listViewContacts.getItems().size());
+                    System.out.println("   - listViewFamily items: " + listViewFamily.getItems().size());
+                } else {
+                    System.out.println("ERROR: One or both ListView fields are null");
+                }
+            } else {
+                System.out.println("WARNING: Contacts list is null - might be a connection issue");
             }
+
+            System.out.println("=== DEBUG COMPLETED ===\n");
+
+            // Thử làm mới danh sách liên hệ
+            refreshContacts();
+
+        } catch (Exception e) {
+            System.out.println("EXCEPTION during debug: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Lọc danh sách liên hệ theo từ khóa tìm kiếm
+     * 
+     * @param searchText Từ khóa tìm kiếm
+     */
+    private void filterContacts(String searchText) {
+        try {
+            System.out.println("--- filterContacts started with keyword: '" + searchText + "' ---");
+
+            // Hiển thị thông báo đang tìm kiếm
+            Platform.runLater(() -> {
+                // Xóa tất cả các mục hiện tại
+                if (listViewContacts != null) {
+                    listViewContacts.getItems().clear();
+
+                    // Hiển thị thông báo đang tìm kiếm
+                    HBox searchingBox = new HBox();
+                    searchingBox.setAlignment(Pos.CENTER);
+                    searchingBox.setPadding(new Insets(10));
+                    searchingBox.setPrefWidth(225);
+                    searchingBox.setStyle("-fx-background-color: transparent;");
+
+                    Label searchingLabel = new Label("Đang tìm kiếm...");
+                    searchingLabel.setStyle(
+                            "-fx-text-fill: #1877f2;" +
+                                    "-fx-font-size: 13px;");
+
+                    searchingBox.getChildren().add(searchingLabel);
+                    listViewContacts.getItems().add(searchingBox);
+                }
+
+                if (listViewFamily != null) {
+                    listViewFamily.getItems().clear();
+                }
+            });
+
+            // Chạy chẩn đoán nếu có vẻ như có vấn đề
+            if (searchText.equalsIgnoreCase("debug")) {
+                System.out.println("DEBUG COMMAND detected - running diagnostics");
+                debugConnectionAndData();
+
+                // Hiển thị thông báo debug trên giao diện
+                Platform.runLater(() -> {
+                    if (listViewContacts != null) {
+                        listViewContacts.getItems().clear();
+
+                        HBox debugBox = new HBox();
+                        debugBox.setAlignment(Pos.CENTER);
+                        debugBox.setPadding(new Insets(10));
+                        debugBox.setPrefWidth(225);
+                        debugBox.setStyle("-fx-background-color: transparent;");
+
+                        Label debugLabel = new Label("Debug info đã được in ra trong terminal");
+                        debugLabel.setStyle(
+                                "-fx-text-fill: #1877f2;" +
+                                        "-fx-font-size: 13px;");
+
+                        debugBox.getChildren().add(debugLabel);
+                        listViewContacts.getItems().add(debugBox);
+                    }
+                });
+
+                return;
+            }
+
+            // Lấy danh sách liên hệ
+            ArrayList<utilitez.Pair> contacts = clinetView.getContactsWithType();
+
+            if (contacts == null || contacts.isEmpty()) {
+                System.out.println("WARNING: Contact list is null or empty");
+
+                // Hiển thị thông báo không có liên hệ
+                Platform.runLater(() -> {
+                    if (listViewContacts != null) {
+                        listViewContacts.getItems().clear();
+
+                        HBox noContactsBox = new HBox();
+                        noContactsBox.setAlignment(Pos.CENTER);
+                        noContactsBox.setPadding(new Insets(10));
+                        noContactsBox.setPrefWidth(225);
+                        noContactsBox.setStyle("-fx-background-color: transparent;");
+
+                        Label noContactsLabel = new Label("Không có liên hệ nào trong danh sách");
+                        noContactsLabel.setStyle(
+                                "-fx-text-fill: #65676b;" +
+                                        "-fx-font-size: 13px;");
+
+                        noContactsBox.getChildren().add(noContactsLabel);
+                        listViewContacts.getItems().add(noContactsBox);
+                    }
+                });
+
+                return;
+            }
+
+            System.out.println("Total contacts to search through: " + contacts.size());
+
+            // Thực hiện tìm kiếm trên một thread riêng để không làm chậm UI
+            new Thread(() -> {
+                // Đếm số kết quả tìm thấy
+                int resultsCount = 0;
+
+                // Danh sách lưu trữ kết quả tìm thấy
+                ArrayList<HBox> contactResults = new ArrayList<>();
+                ArrayList<HBox> familyResults = new ArrayList<>();
+
+                // Lọc và hiển thị các liên hệ phù hợp
+                for (utilitez.Pair contact : contacts) {
+                    User user = (User) contact.getFirst();
+                    String type = (String) contact.getSecond();
+
+                    // Tìm kiếm theo nhiều trường khác nhau
+                    String fullName = (user.getFname() + " " + user.getLname()).toLowerCase();
+                    String username = user.getUsername().toLowerCase();
+                    String email = user.getEmail() != null ? user.getEmail().toLowerCase() : "";
+
+                    System.out.println("Checking user: " + username + " (" + fullName + ")");
+
+                    // Loại bỏ dấu tiếng Việt để tìm kiếm không phân biệt dấu
+                    String normalizedFullName = removeAccents(fullName);
+                    String normalizedSearchText = removeAccents(searchText.toLowerCase());
+
+                    // Kiểm tra nếu bất kỳ trường nào khớp với từ khóa tìm kiếm
+                    boolean matches = false;
+
+                    // Tìm kiếm chính xác với dấu
+                    if (fullName.contains(searchText) ||
+                            username.contains(searchText) ||
+                            email.contains(searchText)) {
+                        matches = true;
+                        System.out.println("MATCH found (exact match): " + username);
+                    }
+
+                    // Tìm kiếm không phân biệt dấu
+                    if (!matches && (normalizedFullName.contains(normalizedSearchText) ||
+                            removeAccents(username).contains(normalizedSearchText) ||
+                            removeAccents(email).contains(normalizedSearchText))) {
+                        matches = true;
+                        System.out.println("MATCH found (accent-insensitive): " + username);
+                    }
+
+                    // Tìm kiếm theo từng từ (cho phép tìm kiếm không theo thứ tự)
+                    if (!matches && searchText.contains(" ")) {
+                        String[] searchWords = normalizedSearchText.split("\\s+");
+                        boolean allWordsMatch = true;
+
+                        for (String word : searchWords) {
+                            if (word.trim().isEmpty())
+                                continue;
+
+                            if (!normalizedFullName.contains(word) &&
+                                    !removeAccents(username).contains(word) &&
+                                    !removeAccents(email).contains(word)) {
+                                allWordsMatch = false;
+                                break;
+                            }
+                        }
+
+                        if (allWordsMatch) {
+                            matches = true;
+                            System.out.println("MATCH found (multi-word): " + username);
+                        }
+                    }
+
+                    if (matches) {
+                        final HBox contactBox = createContactBox(user, type);
+
+                        // Thêm vào danh sách kết quả thích hợp
+                        if (type.equals("Family")) {
+                            familyResults.add(contactBox);
+                        } else {
+                            contactResults.add(contactBox);
+                        }
+
+                        resultsCount++;
+                    }
+                }
+
+                // Cập nhật UI trên thread chính
+                final int finalResultsCount = resultsCount;
+                Platform.runLater(() -> {
+                    // Xóa tất cả các mục hiện tại
+                    if (listViewContacts != null) {
+                        listViewContacts.getItems().clear();
+                    }
+
+                    if (listViewFamily != null) {
+                        listViewFamily.getItems().clear();
+                    }
+
+                    // Hiển thị thông báo nếu không tìm thấy kết quả
+                    if (finalResultsCount == 0) {
+                        // Tạo box hiển thị không tìm thấy kết quả
+                        HBox noResultsBox = new HBox();
+                        noResultsBox.setAlignment(Pos.CENTER);
+                        noResultsBox.setPadding(new Insets(20));
+                        noResultsBox.setPrefWidth(225);
+                        noResultsBox.setStyle("-fx-background-color: transparent;");
+
+                        Label noResultsLabel = new Label("Không tìm thấy kết quả phù hợp");
+                        noResultsLabel.setStyle(
+                                "-fx-text-fill: #65676b;" +
+                                        "-fx-font-size: 13px");
+
+                        // Thêm nút để làm mới danh sách liên hệ
+                        Button refreshButton = new Button("Hiển thị tất cả liên hệ");
+                        refreshButton.setStyle(
+                                "-fx-background-color: #1877f2;" +
+                                        "-fx-text-fill: white;" +
+                                        "-fx-padding: 5 10;" +
+                                        "-fx-background-radius: 5;" +
+                                        "-fx-cursor: hand;");
+                        refreshButton.setOnAction(e -> refreshContacts());
+
+                        VBox noResultsContainer = new VBox(10);
+                        noResultsContainer.setAlignment(Pos.CENTER);
+                        noResultsContainer.getChildren().addAll(noResultsLabel, refreshButton);
+
+                        noResultsBox.getChildren().clear();
+                        noResultsBox.getChildren().add(noResultsContainer);
+
+                        // Hiển thị thông báo trong cả hai danh sách
+                        if (listViewContacts != null) {
+                            listViewContacts.getItems().add(noResultsBox);
+                        }
+
+                        if (listViewFamily != null) {
+                            HBox noResultsBoxFamily = new HBox();
+                            noResultsBoxFamily.setAlignment(Pos.CENTER);
+                            noResultsBoxFamily.setPadding(new Insets(20));
+                            noResultsBoxFamily.setPrefWidth(225);
+                            noResultsBoxFamily.setStyle("-fx-background-color: transparent;");
+
+                            VBox noResultsContainerFamily = new VBox(10);
+                            noResultsContainerFamily.setAlignment(Pos.CENTER);
+                            noResultsContainerFamily.getChildren().add(new Label("Không tìm thấy kết quả"));
+
+                            noResultsBoxFamily.getChildren().add(noResultsContainerFamily);
+                            listViewFamily.getItems().add(noResultsBoxFamily);
+                        }
+
+                        // Mở cả hai TitledPane
+                        if (titlePaneFriends != null) {
+                            titlePaneFriends.setExpanded(true);
+                        }
+                        if (titlePaneFamily != null) {
+                            titlePaneFamily.setExpanded(true);
+                        }
+                    } else {
+                        // Hiển thị số lượng kết quả tìm thấy ở cả hai vị trí
+                        HBox resultsCountBox = new HBox();
+                        resultsCountBox.setAlignment(Pos.CENTER);
+                        resultsCountBox.setPadding(new Insets(5, 0, 10, 0));
+                        resultsCountBox.setPrefWidth(225);
+                        resultsCountBox.setStyle("-fx-background-color: transparent;");
+
+                        Label resultsCountLabel = new Label("Tìm thấy " + finalResultsCount + " kết quả");
+                        resultsCountLabel.setStyle(
+                                "-fx-text-fill: #1877f2;" +
+                                        "-fx-font-size: 12px;" +
+                                        "-fx-font-weight: bold;");
+
+                        resultsCountBox.getChildren().add(resultsCountLabel);
+
+                        // Thêm các kết quả tìm kiếm
+                        if (listViewContacts != null) {
+                            // Thêm vào đầu danh sách
+                            listViewContacts.getItems().add(0, resultsCountBox);
+                            // Thêm các kết quả liên hệ thường
+                            listViewContacts.getItems().addAll(contactResults);
+                        }
+
+                        // Thêm các kết quả Family và mở TitledPane nếu có kết quả
+                        if (listViewFamily != null) {
+                            if (!familyResults.isEmpty()) {
+                                // Thêm tiêu đề số lượng kết quả trong Family
+                                HBox familyResultsCountBox = new HBox();
+                                familyResultsCountBox.setAlignment(Pos.CENTER);
+                                familyResultsCountBox.setPadding(new Insets(5, 0, 10, 0));
+                                familyResultsCountBox.setPrefWidth(225);
+                                familyResultsCountBox.setStyle("-fx-background-color: transparent;");
+
+                                Label familyResultsLabel = new Label(
+                                        "Tìm thấy " + familyResults.size() + " kết quả Family");
+                                familyResultsLabel.setStyle(
+                                        "-fx-text-fill: #1877f2;" +
+                                                "-fx-font-size: 12px;" +
+                                                "-fx-font-weight: bold;");
+
+                                familyResultsCountBox.getChildren().add(familyResultsLabel);
+                                listViewFamily.getItems().add(0, familyResultsCountBox);
+
+                                // Thêm các kết quả Family
+                                listViewFamily.getItems().addAll(familyResults);
+
+                                // Mở TitledPane Family nếu có kết quả
+                                if (titlePaneFamily != null) {
+                                    titlePaneFamily.setExpanded(true);
+                                }
+                            }
+                        }
+
+                        // Mở TitledPane Friends
+                        if (titlePaneFriends != null) {
+                            titlePaneFriends.setExpanded(true);
+                        }
+                    }
+                });
+
+                System.out.println("Total matches found: " + resultsCount);
+                System.out.println("--- filterContacts completed ---");
+            }).start();
+
+        } catch (Exception e) {
+            System.out.println("ERROR in filterContacts: " + e.getMessage());
+            e.printStackTrace();
+
+            // Hiển thị thông báo lỗi
+            Platform.runLater(() -> {
+                if (listViewContacts != null) {
+                    listViewContacts.getItems().clear();
+
+                    HBox errorBox = new HBox();
+                    errorBox.setAlignment(Pos.CENTER);
+                    errorBox.setPadding(new Insets(10));
+                    errorBox.setPrefWidth(225);
+                    errorBox.setStyle("-fx-background-color: transparent;");
+
+                    Label errorLabel = new Label("Đã xảy ra lỗi khi tìm kiếm");
+                    errorLabel.setStyle(
+                            "-fx-text-fill: #e41e3f;" +
+                                    "-fx-font-size: 13px;");
+
+                    errorBox.getChildren().add(errorLabel);
+                    listViewContacts.getItems().add(errorBox);
+                }
+            });
+        }
+    }
+
+    /**
+     * Tạo box hiển thị thông tin liên hệ
+     */
+    private HBox createContactBox(User user, String type) {
+        HBox contactBox = new HBox(10);
+        contactBox.setAlignment(Pos.CENTER_LEFT);
+        contactBox.setPadding(new Insets(8, 12, 8, 12));
+        contactBox.setPrefWidth(225);
+        contactBox.setStyle(
+                "-fx-background-color: transparent;" +
+                        "-fx-background-radius: 8;" +
+                        "-fx-border-radius: 8");
+
+        // Thêm hiệu ứng hover
+        contactBox.setOnMouseEntered(e -> {
+            contactBox.setStyle(
+                    "-fx-background-color: #f0f2f5;" +
+                            "-fx-background-radius: 8;" +
+                            "-fx-border-radius: 8;" +
+                            "-fx-cursor: hand");
         });
+        contactBox.setOnMouseExited(e -> {
+            contactBox.setStyle(
+                    "-fx-background-color: transparent;" +
+                            "-fx-background-radius: 8;" +
+                            "-fx-border-radius: 8");
+        });
+
+        // User info container
+        VBox userInfo = new VBox(2);
+        userInfo.setAlignment(Pos.CENTER_LEFT);
+        userInfo.setPrefWidth(180);
+
+        // Hiển thị tên đầy đủ
+        Label nameLabel = new Label(user.getFname() + " " + user.getLname());
+        nameLabel.setStyle(
+                "-fx-font-weight: bold;" +
+                        "-fx-text-fill: #050505;" +
+                        "-fx-font-size: 14px");
+
+        // Username display
+        Label usernameLabel = new Label("@" + user.getUsername());
+        usernameLabel.setStyle(
+                "-fx-text-fill: #65676b;" +
+                        "-fx-font-size: 12px");
+
+        userInfo.getChildren().addAll(nameLabel, usernameLabel);
+
+        // Status indicator (small colored circle)
+        Circle statusCircle = new Circle(4);
+        switch (user.getStatus().toLowerCase()) {
+            case "online":
+                statusCircle.setFill(Color.web("#31a24c"));
+                break;
+            case "busy":
+                statusCircle.setFill(Color.web("#e41e3f"));
+                break;
+            default:
+                statusCircle.setFill(Color.web("#65676b"));
+        }
+
+        // Add all components to contact box
+        contactBox.getChildren().addAll(userInfo, statusCircle);
+
+        // Add click handler to open chat
+        contactBox.setOnMouseClicked(event -> cellClickAction(event, user.getUsername()));
+
+        return contactBox;
     }
 
     @FXML
@@ -1124,128 +1647,131 @@ public class ChatSceneController implements Initializable {
         }
     }
 
+    /**
+     * Làm mới danh sách liên hệ, hiển thị tất cả
+     */
     public void refreshContacts() {
-        // Check if the ListView fields are null
-        if (listViewContacts == null || listViewFamily == null) {
-            System.out.println("Warning: ListView is null in refreshContacts, skipping refresh operation");
-            return;
-        }
+        try {
+            System.out.println("--- refreshContacts() started ---");
 
-        ArrayList<utilitez.Pair> contacts = clinetView.getContactsWithType();
-        if (contacts != null) {
-            try {
-                // Clear existing contacts
-                listViewContacts.getItems().clear();
-                listViewFamily.getItems().clear();
+            // Lấy danh sách liên hệ từ client view
+            ArrayList<utilitez.Pair> contacts = clinetView.getContactsWithType();
 
-                for (utilitez.Pair contact : contacts) {
-                    User user = (User) contact.getFirst();
-                    String type = (String) contact.getSecond();
+            if (contacts == null) {
+                System.out.println("ERROR: contacts list is null");
+                return;
+            }
 
-                    // Create contact box
-                    HBox contactBox = new HBox(10);
-                    contactBox.setAlignment(Pos.CENTER_LEFT);
-                    contactBox.setPadding(new Insets(5, 5, 5, 5));
-                    contactBox.setPrefWidth(225);
+            if (contacts.isEmpty()) {
+                System.out.println("WARNING: contacts list is empty");
+            } else {
+                System.out.println("Total contacts retrieved: " + contacts.size());
+            }
 
-                    // Set click action to open chat
-                    String username = user.getUsername();
-                    contactBox.setOnMouseClicked(event -> cellClickAction(event, username));
+            // Kiểm tra xem ListView đã được khởi tạo chưa
+            if (listViewContacts == null || listViewFamily == null) {
+                System.out.println("ERROR: ListView controls are null");
+                return;
+            }
 
-                    // Add avatar with cache busting
-                    ImageView avatar = new ImageView();
-                    avatar.setFitWidth(40);
-                    avatar.setFitHeight(40);
-                    avatar.setPreserveRatio(true);
-                    avatar.setCache(false); // Important: disable caching
+            // Xóa các mục hiện tại
+            listViewContacts.getItems().clear();
+            listViewFamily.getItems().clear();
+            System.out.println("Cleared existing items from ListViews");
 
-                    try {
-                        if (user.getImage() != null && !user.getImage().trim().isEmpty()) {
-                            // Add timestamp for cache busting
-                            String imagePath = user.getImage();
-                            if (imagePath.startsWith("http")) {
-                                String separator = imagePath.contains("?") ? "&" : "?";
-                                imagePath += separator + "t=" + System.currentTimeMillis();
-                            }
-                            avatar.setImage(new Image(imagePath, true));
-                        } else {
-                            // Use default image based on gender with timestamp
-                            String defaultImage = (user.getGender() != null &&
-                                    user.getGender().equalsIgnoreCase("Female")) ? "/resouces/female.png"
-                                            : "/resouces/male.png";
+            // Đếm số lượng contact đã thêm vào từng danh sách
+            int regularCount = 0;
+            int familyCount = 0;
 
-                            String fullPath = getClass().getResource(defaultImage).toExternalForm() +
-                                    "?t=" + System.currentTimeMillis();
+            // Hiển thị tất cả người dùng
+            for (utilitez.Pair contact : contacts) {
+                User user = (User) contact.getFirst();
+                String type = (String) contact.getSecond();
 
-                            avatar.setImage(new Image(fullPath, true));
-                        }
+                System.out.println("Processing contact: " + user.getUsername() + " | Type: " + type);
 
-                        // Make avatar circular
-                        Circle clip = new Circle(20, 20, 20);
-                        avatar.setClip(clip);
-                    } catch (Exception e) {
-                        System.out
-                                .println("Error loading contact avatar for " + user.getUsername() + ": "
-                                        + e.getMessage());
-                        try {
-                            // Load default as fallback
-                            avatar.setImage(new Image(getClass().getResource("/resouces/male.png").toExternalForm() +
-                                    "?t=" + System.currentTimeMillis()));
-                        } catch (Exception ex) {
-                            System.out.println("Failed to load fallback avatar");
-                        }
-                    }
+                // Tạo mục liên hệ với thông tin người dùng
+                HBox contactBox = new HBox(10);
+                contactBox.setAlignment(Pos.CENTER_LEFT);
+                contactBox.setPadding(new Insets(8, 12, 8, 12));
+                contactBox.setPrefWidth(225);
+                contactBox.setStyle(
+                        "-fx-background-color: transparent;" +
+                                "-fx-background-radius: 8;" +
+                                "-fx-border-radius: 8");
 
-                    // Create status indicator
-                    Circle statusCircle = new Circle(5);
-                    String status = clinetView.getStatus(user.getUsername());
-                    if ("online".equals(status)) {
-                        statusCircle.setFill(Color.GREEN);
-                    } else if ("busy".equals(status)) {
-                        statusCircle.setFill(Color.RED);
-                    } else {
-                        statusCircle.setFill(Color.GRAY);
-                    }
+                // Thêm hiệu ứng hover
+                contactBox.setOnMouseEntered(e -> {
+                    contactBox.setStyle(
+                            "-fx-background-color: #f0f2f5;" +
+                                    "-fx-background-radius: 8;" +
+                                    "-fx-border-radius: 8;" +
+                                    "-fx-cursor: hand");
+                });
+                contactBox.setOnMouseExited(e -> {
+                    contactBox.setStyle(
+                            "-fx-background-color: transparent;" +
+                                    "-fx-background-radius: 8;" +
+                                    "-fx-border-radius: 8");
+                });
 
-                    ImageView statusView = new ImageView();
-                    statusView.setFitWidth(10);
-                    statusView.setFitHeight(10);
-                    StackPane statusPane = new StackPane(statusCircle);
-                    statusPane.setTranslateX(-10);
-                    statusPane.setTranslateY(15);
+                // User info container
+                VBox userInfo = new VBox(2);
+                userInfo.setAlignment(Pos.CENTER_LEFT);
+                userInfo.setPrefWidth(180);
 
-                    // Add name and status in a VBox
-                    VBox infoBox = new VBox(2);
-                    Label nameLabel = new Label(user.getUsername());
-                    nameLabel.setStyle("-fx-font-weight: bold;");
+                // Hiển thị tên đầy đủ
+                Label nameLabel = new Label(user.getFname() + " " + user.getLname());
+                nameLabel.setStyle(
+                        "-fx-font-weight: bold;" +
+                                "-fx-text-fill: #050505;" +
+                                "-fx-font-size: 14px");
 
-                    Label statusLabel = new Label(status);
-                    statusLabel.setStyle("-fx-text-fill: #65676b; -fx-font-size: 11;");
+                // Username
+                Label usernameLabel = new Label("@" + user.getUsername());
+                usernameLabel.setStyle(
+                        "-fx-text-fill: #65676b;" +
+                                "-fx-font-size: 12px");
 
-                    infoBox.getChildren().addAll(nameLabel, statusLabel);
+                userInfo.getChildren().addAll(nameLabel, usernameLabel);
 
-                    // Create container for avatar and status indicator
-                    StackPane avatarPane = new StackPane();
-                    avatarPane.getChildren().addAll(avatar, statusPane);
-
-                    // Add components to contact box
-                    contactBox.getChildren().addAll(avatarPane, infoBox);
-
-                    // Add contact to appropriate list based on type
-                    if ("Family".equalsIgnoreCase(type)) {
-                        listViewFamily.getItems().add(contactBox);
-                    } else {
-                        listViewContacts.getItems().add(contactBox);
-                    }
+                // Status indicator
+                Circle statusCircle = new Circle(4);
+                switch (user.getStatus().toLowerCase()) {
+                    case "online":
+                        statusCircle.setFill(Color.web("#31a24c"));
+                        break;
+                    case "busy":
+                        statusCircle.setFill(Color.web("#e41e3f"));
+                        break;
+                    default:
+                        statusCircle.setFill(Color.web("#65676b"));
                 }
 
-                System.out.println("Refreshed contact lists with " + contacts.size() + " contacts");
-            } catch (Exception e) {
-                System.out.println("Error in refreshContacts: " + e.getMessage());
-                e.printStackTrace();
+                // Add components to contact box
+                contactBox.getChildren().addAll(userInfo, statusCircle);
+
+                // Add click handler to open chat
+                contactBox.setOnMouseClicked(event -> cellClickAction(event, user.getUsername()));
+
+                // Add to appropriate list
+                if (type.equals("Family")) {
+                    listViewFamily.getItems().add(contactBox);
+                    familyCount++;
+                } else {
+                    listViewContacts.getItems().add(contactBox);
+                    regularCount++;
+                }
             }
-        } else {
-            System.out.println("No contacts to display or error fetching contacts");
+
+            System.out.println("Added contacts - Regular: " + regularCount + ", Family: " + familyCount);
+            System.out.println("ListView counts - Regular: " + listViewContacts.getItems().size() +
+                    ", Family: " + listViewFamily.getItems().size());
+            System.out.println("--- refreshContacts() completed ---");
+
+        } catch (Exception e) {
+            System.out.println("ERROR in refreshContacts: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -1714,7 +2240,7 @@ public class ChatSceneController implements Initializable {
     }
 
     /**
-     * Thiết lập chức năng tìm kiếm cho TextField
+     * Thiết lập chức năng tìm kiếm cho ô tìm kiếm
      */
     private void setupSearchField() {
         if (txtFieldSearch == null) {
@@ -1725,234 +2251,185 @@ public class ChatSceneController implements Initializable {
         // Thêm style cho ô tìm kiếm với border và màu nền
         txtFieldSearch.setStyle(
                 "-fx-background-color: #ffffff;" +
-                        "-fx-background-radius: 5;" +
-                        "-fx-padding: 8 12;" +
+                        "-fx-background-radius: 20;" +
+                        "-fx-padding: 8 12 8 12;" +
                         "-fx-font-size: 13px;" +
                         "-fx-prompt-text-fill: #65676b;" +
                         "-fx-text-fill: #050505;" +
-                        "-fx-border-color: #4287f5;" +
-                        "-fx-border-radius: 5;" +
+                        "-fx-border-color: #65676b;"+
+                        "-fx-border-radius: 20;" +
                         "-fx-border-width: 1;" +
                         "-fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 4, 0, 0, 1);");
 
-        // Thêm listener để bắt sự kiện khi người dùng gõ vào ô tìm kiếm
-        txtFieldSearch.textProperty().addListener((observable, oldValue, newValue) -> {
-            // Khi có thay đổi trong ô tìm kiếm, thực hiện tìm kiếm
-            String searchText = newValue.trim().toLowerCase();
+        // Tạo container chứa ô tìm kiếm và nút xóa
+        HBox searchContainer = (HBox) txtFieldSearch.getParent();
+        if (searchContainer != null) {
+            // Xóa ô tìm kiếm hiện tại từ container
+            searchContainer.getChildren().remove(txtFieldSearch);
 
-            if (searchText.isEmpty()) {
-                // Nếu ô tìm kiếm trống, hiển thị lại tất cả liên hệ
-                refreshContacts();
-            } else {
-                // Lọc danh sách liên hệ theo từ khóa tìm kiếm
-                filterContacts(searchText);
-            }
-        });
+            // Tạo StackPane để đặt ô tìm kiếm và nút xóa lên nhau
+            StackPane searchPane = new StackPane();
+            searchPane.setAlignment(Pos.CENTER_RIGHT);
+
+            // Biểu tượng xóa tìm kiếm
+            Button clearButton = new Button("✕");
+            clearButton.setStyle(
+                    "-fx-background-color: transparent;" +
+                            "-fx-text-fill: #65676b;" +
+                            "-fx-font-size: 12px;" +
+                            "-fx-cursor: hand;");
+            clearButton.setVisible(false);
+            clearButton.setOnAction(e -> {
+                txtFieldSearch.clear();
+                clearButton.setVisible(false);
+                refreshContacts(); // Hiển thị lại toàn bộ danh sách
+            });
+
+            // Đặt vị trí nút xóa
+            StackPane.setAlignment(clearButton, Pos.CENTER_RIGHT);
+            StackPane.setMargin(clearButton, new Insets(0, 12, 0, 0));
+
+            // Thêm txtFieldSearch vào StackPane
+            searchPane.getChildren().addAll(txtFieldSearch, clearButton);
+
+            // Thêm StackPane vào container
+            searchContainer.getChildren().add(searchPane);
+            searchContainer.setAlignment(Pos.CENTER);
+
+            // Sự kiện khi nội dung thay đổi
+            txtFieldSearch.textProperty().addListener((observable, oldValue, newValue) -> {
+                // Hiển thị/ẩn nút xóa dựa trên nội dung ô tìm kiếm
+                clearButton.setVisible(!newValue.isEmpty());
+
+                // Khi có thay đổi trong ô tìm kiếm, thực hiện tìm kiếm
+                String searchText = newValue.trim();
+
+                if (searchText.isEmpty()) {
+                    // Nếu ô tìm kiếm trống, hiển thị lại tất cả liên hệ
+                    refreshContacts();
+                } else {
+                    // Lọc danh sách liên hệ theo từ khóa tìm kiếm
+                    filterContacts(searchText);
+                }
+            });
+        } else {
+            // Fallback nếu không tìm thấy container
+            // Thêm listener để bắt sự kiện khi người dùng gõ vào ô tìm kiếm
+            txtFieldSearch.textProperty().addListener((observable, oldValue, newValue) -> {
+                // Khi có thay đổi trong ô tìm kiếm, thực hiện tìm kiếm
+                String searchText = newValue.trim();
+
+                if (searchText.isEmpty()) {
+                    // Nếu ô tìm kiếm trống, hiển thị lại tất cả liên hệ
+                    refreshContacts();
+                } else {
+                    // Lọc danh sách liên hệ theo từ khóa tìm kiếm
+                    filterContacts(searchText);
+                }
+            });
+        }
 
         // Đặt gợi ý cho ô tìm kiếm
         txtFieldSearch.setPromptText("Tìm kiếm bạn bè...");
+
+        // Thêm xử lý sự kiện khi nhấn Enter
+        txtFieldSearch.setOnKeyPressed(event -> {
+            if (event.getCode() == KeyCode.ENTER) {
+                String searchText = txtFieldSearch.getText().trim();
+                System.out.println("ENTER key pressed. Search text: '" + searchText + "'");
+                if (searchText.isEmpty()) {
+                    System.out.println("Search text is empty, refreshing all contacts");
+                    refreshContacts();
+                } else {
+                    System.out.println("Searching for contacts with keyword: " + searchText);
+                    filterContacts(searchText);
+                }
+            }
+        });
 
         // Thêm hiệu ứng focus
         txtFieldSearch.focusedProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue) { // Khi focus
                 txtFieldSearch.setStyle(
                         "-fx-background-color: #ffffff;" +
-                                "-fx-background-radius: 5;" +
-                                "-fx-padding: 8 12;" +
+                                "-fx-background-radius: 20;" +
+                                "-fx-padding: 8 12 8 12;" +
                                 "-fx-font-size: 13px;" +
-                                "-fx-prompt-text-fill: #65676b;" +
+                                "-fx-prompt-text-fill: #1877f2;" +
                                 "-fx-text-fill: #050505;" +
                                 "-fx-border-color: #1877f2;" +
-                                "-fx-border-radius: 5;" +
+                                "-fx-border-radius: 20;" +
                                 "-fx-border-width: 2;" +
-                                "-fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.15), 8, 0, 0, 2);");
+                                "-fx-effect: dropshadow(gaussian, rgba(24, 119, 242, 0.25), 8, 0, 0, 2);");
             } else { // Khi mất focus
                 txtFieldSearch.setStyle(
                         "-fx-background-color: #ffffff;" +
-                                "-fx-background-radius: 5;" +
-                                "-fx-padding: 8 12;" +
+                                "-fx-background-radius: 20;" +
+                                "-fx-padding: 8 12 8 12;" +
                                 "-fx-font-size: 13px;" +
                                 "-fx-prompt-text-fill: #65676b;" +
                                 "-fx-text-fill: #050505;" +
                                 "-fx-border-color: #e4e6eb;" +
-                                "-fx-border-radius: 5;" +
+                                "-fx-border-radius: 20;" +
                                 "-fx-border-width: 1;" +
                                 "-fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 4, 0, 0, 1);");
+            }
+        });
+
+        // Thêm tooltip gợi ý cách tìm kiếm
+        final Tooltip searchTip = new Tooltip(
+                "Gợi ý tìm kiếm:\n" +
+                        "- Tìm kiếm theo tên, username hoặc email\n" +
+                        "- Không phân biệt chữ hoa/thường, có dấu/không dấu\n" +
+                        "- Có thể tìm theo nhiều từ khóa cùng lúc");
+        searchTip.setStyle(
+                "-fx-font-size: 12px;" +
+                        "-fx-padding: 8 12;" +
+                        "-fx-background-radius: 6;" +
+                        "-fx-background-color: rgba(0, 0, 0, 0.75);" +
+                        "-fx-text-fill: white;");
+        txtFieldSearch.setTooltip(searchTip);
+
+        // Tự động hiển thị tooltip khi focus
+        txtFieldSearch.focusedProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal) {
+                Point2D point = txtFieldSearch.localToScreen(
+                        txtFieldSearch.getLayoutBounds().getMaxX(),
+                        txtFieldSearch.getLayoutBounds().getMaxY());
+                searchTip.show(txtFieldSearch, point.getX(), point.getY());
+
+                // Tự động ẩn tooltip sau 3 giây
+                new Thread(() -> {
+                    try {
+                        Thread.sleep(3000);
+                        Platform.runLater(() -> searchTip.hide());
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }).start();
+            } else {
+                searchTip.hide();
             }
         });
     }
 
     /**
-     * Lọc danh sách liên hệ theo từ khóa tìm kiếm
+     * Chuyển đổi chuỗi có dấu tiếng Việt sang không dấu
+     * để thực hiện tìm kiếm không phân biệt dấu
      * 
-     * @param searchText Từ khóa tìm kiếm
+     * @param text Chuỗi cần chuyển đổi
+     * @return Chuỗi không dấu
      */
-    private void filterContacts(String searchText) {
-        try {
-            // Lấy danh sách liên hệ
-            ArrayList<utilitez.Pair> contacts = clinetView.getContactsWithType();
-
-            if (contacts == null || contacts.isEmpty()) {
-                return;
-            }
-
-            // Xóa tất cả các mục hiện tại
-            listViewContacts.getItems().clear();
-            listViewFamily.getItems().clear();
-
-            // Đếm số kết quả tìm thấy
-            int resultsCount = 0;
-
-            // Lọc và hiển thị các liên hệ phù hợp
-            for (utilitez.Pair contact : contacts) {
-                User user = (User) contact.getFirst();
-                String type = (String) contact.getSecond();
-
-                // Tìm kiếm theo tên đầy đủ hoặc tên người dùng
-                String fullName = (user.getFname() + " " + user.getLname()).toLowerCase();
-                String username = user.getUsername().toLowerCase();
-
-                if (fullName.contains(searchText) || username.contains(searchText)) {
-                    // Tạo mục liên hệ với giao diện đẹp hơn
-                    HBox contactBox = new HBox(10);
-                    contactBox.setAlignment(Pos.CENTER_LEFT);
-                    contactBox.setPadding(new Insets(8, 12, 8, 12));
-                    contactBox.setPrefWidth(225);
-                    contactBox.setStyle(
-                            "-fx-background-color: transparent;" +
-                                    "-fx-background-radius: 8;" +
-                                    "-fx-border-radius: 8");
-
-                    // Thêm hiệu ứng hover
-                    contactBox.setOnMouseEntered(e -> {
-                        contactBox.setStyle(
-                                "-fx-background-color: #f0f2f5;" +
-                                        "-fx-background-radius: 8;" +
-                                        "-fx-border-radius: 8;" +
-                                        "-fx-cursor: hand");
-                    });
-                    contactBox.setOnMouseExited(e -> {
-                        contactBox.setStyle(
-                                "-fx-background-color: transparent;" +
-                                        "-fx-background-radius: 8;" +
-                                        "-fx-border-radius: 8");
-                    });
-
-                    // Avatar container
-                    StackPane avatarContainer = new StackPane();
-                    avatarContainer.setPrefSize(40, 40);
-                    avatarContainer.setMaxSize(40, 40);
-                    avatarContainer.setMinSize(40, 40);
-
-                    // Avatar image
-                    ImageView avatar = new ImageView();
-                    avatar.setFitWidth(40);
-                    avatar.setFitHeight(40);
-                    avatar.setPreserveRatio(false);
-                    avatar.setSmooth(true);
-                    avatar.setCache(false);
-
-                    // Load avatar image
-                    try {
-                        if (user.getImage() != null && !user.getImage().trim().isEmpty()) {
-                            String imagePath = user.getImage() + "?t=" + System.currentTimeMillis();
-                            avatar.setImage(new Image(imagePath));
-                        } else {
-                            String defaultPath = user.getGender() != null &&
-                                    user.getGender().equalsIgnoreCase("Female") ? "/resouces/female.png"
-                                            : "/resouces/male.png";
-                            avatar.setImage(new Image(getClass().getResource(defaultPath).toExternalForm()));
-                        }
-
-                        // Make avatar circular
-                        Circle clip = new Circle(20);
-                        clip.setCenterX(20);
-                        clip.setCenterY(20);
-                        avatar.setClip(clip);
-
-                    } catch (Exception e) {
-                        System.out.println("Error loading avatar: " + e.getMessage());
-                        try {
-                            avatar.setImage(new Image(getClass().getResource("/resouces/male.png").toExternalForm() +
-                                    "?t=" + System.currentTimeMillis()));
-                            Circle clip = new Circle(20);
-                            clip.setCenterX(20);
-                            clip.setCenterY(20);
-                            avatar.setClip(clip);
-                        } catch (Exception ex) {
-                            ex.printStackTrace();
-                        }
-                    }
-
-                    avatarContainer.getChildren().add(avatar);
-
-                    // User info container
-                    VBox userInfo = new VBox(2);
-                    userInfo.setAlignment(Pos.CENTER_LEFT);
-
-                    // Username
-                    Label usernameLabel = new Label(user.getUsername());
-                    usernameLabel.setStyle(
-                            "-fx-font-weight: bold;" +
-                                    "-fx-text-fill: #050505;" +
-                                    "-fx-font-size: 14px");
-
-                    // Status
-                    Label statusLabel = new Label(user.getStatus());
-                    statusLabel.setStyle("-fx-font-size: 12px;");
-
-                    // Set status color
-                    switch (user.getStatus().toLowerCase()) {
-                        case "online":
-                            statusLabel.setStyle(statusLabel.getStyle() + "-fx-text-fill: #31a24c;");
-                            break;
-                        case "busy":
-                            statusLabel.setStyle(statusLabel.getStyle() + "-fx-text-fill: #e41e3f;");
-                            break;
-                        default:
-                            statusLabel.setStyle(statusLabel.getStyle() + "-fx-text-fill: #65676b;");
-                    }
-
-                    userInfo.getChildren().addAll(usernameLabel, statusLabel);
-
-                    // Add all components to contact box
-                    contactBox.getChildren().addAll(avatarContainer, userInfo);
-
-                    // Add click handler
-                    contactBox.setOnMouseClicked(event -> cellClickAction(event, user.getUsername()));
-
-                    // Add to appropriate list
-                    if (type.equals("Family")) {
-                        listViewFamily.getItems().add(contactBox);
-                    } else {
-                        listViewContacts.getItems().add(contactBox);
-                    }
-
-                    resultsCount++;
-                }
-            }
-
-            // Hiển thị thông báo nếu không tìm thấy kết quả
-            if (resultsCount == 0) {
-                HBox noResultsBox = new HBox();
-                noResultsBox.setAlignment(Pos.CENTER);
-                noResultsBox.setPadding(new Insets(20));
-                noResultsBox.setPrefWidth(225);
-                noResultsBox.setStyle("-fx-background-color: transparent;");
-
-                Label noResultsLabel = new Label("Không tìm thấy kết quả phù hợp");
-                noResultsLabel.setStyle(
-                        "-fx-text-fill: #65676b;" +
-                                "-fx-font-size: 13px");
-
-                noResultsBox.getChildren().add(noResultsLabel);
-                listViewContacts.getItems().add(noResultsBox);
-            }
-
-        } catch (Exception e) {
-            System.out.println("Lỗi khi lọc danh bạ: " + e.getMessage());
-            e.printStackTrace();
+    private String removeAccents(String text) {
+        if (text == null) {
+            return "";
         }
+
+        String temp = Normalizer.normalize(text, Normalizer.Form.NFD);
+        Pattern pattern = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
+        return pattern.matcher(temp).replaceAll("").toLowerCase()
+                .replace('đ', 'd')
+                .replace('Đ', 'd');
     }
 
     /**

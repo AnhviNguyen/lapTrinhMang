@@ -770,4 +770,20 @@ public class ClientView extends Application implements ClientViewInt {
     public model.ServerModelInt getServerModel() {
         return controller.getServerModel();
     }
+
+    /**
+     * Kiểm tra xem client đã kết nối tới server hay chưa
+     * 
+     * @return true nếu đã kết nối, false nếu chưa kết nối
+     */
+    public boolean isConnected() {
+        // Kiểm tra trạng thái kết nối thông qua controller
+        try {
+            // Có thể kiểm tra bằng cách thử lấy ServerModel
+            return controller != null && controller.getServerModel() != null;
+        } catch (Exception e) {
+            System.out.println("Error checking connection: " + e.getMessage());
+            return false;
+        }
+    }
 }
