@@ -619,11 +619,11 @@ public class ClientView extends Application implements ClientViewInt {
     /**
      * Receive a voice message from another user
      * 
-     * @param voiceMessage
-     * @throws IOException
+     * @param voiceMessage The voice message that was received
+     * @throws RemoteException
      */
     @Override
-    public void receiveVoiceMessage(VoiceMessage voiceMessage) throws IOException {
+    public void receiveVoiceMessage(VoiceMessage voiceMessage) throws RemoteException {
         // Forward to chat box controller if available
         if (chatBoxController != null) {
             chatBoxController.receiveVoiceMessage(voiceMessage);
@@ -631,6 +631,62 @@ public class ClientView extends Application implements ClientViewInt {
             // If no chat box controller is available, show a notification
             notify("New voice message from " + voiceMessage.getFrom(), Notification.GENERAL);
         }
+    }
+
+    /**
+     * Receive audio data during a voice call
+     * 
+     * @param sender     The username of the sender
+     * @param audioData  The audio data bytes
+     * @param dataLength The length of valid data in the audioData array
+     * @throws RemoteException
+     */
+    @Override
+    public void receiveAudioData(String sender, byte[] audioData, int dataLength) throws RemoteException {
+        Platform.runLater(() -> {
+            try {
+                if (chatBoxController != null) {
+                    chatBoxController.receiveAudioData(sender, audioData, dataLength);
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        });
+    }
+
+    /**
+     * Handle voice call related messages (requests, accepted, rejected, ended)
+     * 
+     * @param message The message containing call information
+     * @throws RemoteException
+     */
+    @Override
+    public void handleCallMessage(Message message) throws RemoteException {
+        Platform.runLater(() -> {
+            try {
+                if (chatBoxController != null) {
+                    String messageType = message.getType();
+                    String sender = message.getFrom();
+
+                    switch (messageType) {
+                        case "voice-call-request":
+                            chatBoxController.receiveCallRequest(sender);
+                            break;
+                        case "voice-call-accepted":
+                            chatBoxController.handleCallAccepted(sender);
+                            break;
+                        case "voice-call-rejected":
+                            chatBoxController.handleCallRejected(sender);
+                            break;
+                        case "voice-call-end":
+                            chatBoxController.handleCallEnded(sender);
+                            break;
+                    }
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        });
     }
 
     public void updateUserStatus(String username, String status) {
@@ -677,5 +733,41 @@ public class ClientView extends Application implements ClientViewInt {
 
     public ChatBoxController getChatBoxController(String username) {
         return tabsControllers != null ? tabsControllers.get(username) : null;
+    }
+
+    /**
+     * Get the username of the current logged-in user
+     *
+     * @return The username of the current user
+     */
+    public String getUsername() {
+        User user = getUserInformation();
+        if (user != null) {
+            return user.getUsername();
+        }
+        return null;
+    }
+
+    /**
+     * Send a message through the controller
+     *
+     * @param message The message to send
+     */
+    public void sendMessage(Message message) {
+        try {
+            controller.sendMsg(message);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            showError("Error", "Failed to Send", "Could not send message: " + ex.getMessage());
+        }
+    }
+
+    /**
+     * Get the server model through the controller
+     *
+     * @return The server model interface
+     */
+    public model.ServerModelInt getServerModel() {
+        return controller.getServerModel();
     }
 }

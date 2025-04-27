@@ -105,7 +105,6 @@ public class ChatSceneController implements Initializable {
     @FXML
     private ListView<User> aListViewFamily;
 
-
     @FXML
     private Label serverStatusLabel;
 
@@ -769,7 +768,6 @@ public class ChatSceneController implements Initializable {
 
                 // Handle Groups list
 
-
                 // Set cell factories
                 aListViewFriends.setCellFactory(listView -> new ListCell<User>() {
                     @Override
@@ -796,7 +794,6 @@ public class ChatSceneController implements Initializable {
                         }
                     }
                 });
-
 
                 // Add click handlers
                 aListViewFriends.setOnMouseClicked(event -> {

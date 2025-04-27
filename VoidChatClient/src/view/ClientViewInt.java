@@ -2,6 +2,7 @@ package view;
 
 import java.io.File;
 import java.io.IOException;
+import java.rmi.RemoteException;
 import java.util.ArrayList;
 import model.ClientModelInt;
 import model.Message;
@@ -161,5 +162,23 @@ public interface ClientViewInt {
      * @throws IOException
      */
     void receiveVoiceMessage(VoiceMessage voiceMessage) throws IOException;
+
+    /**
+     * Receive audio data during a voice call
+     * 
+     * @param sender     The username of the sender
+     * @param audioData  The audio data bytes
+     * @param dataLength The length of valid data in the audioData array
+     * @throws RemoteException
+     */
+    void receiveAudioData(String sender, byte[] audioData, int dataLength) throws RemoteException;
+
+    /**
+     * Handle voice call related messages (requests, accepted, rejected, ended)
+     * 
+     * @param message The message containing call information
+     * @throws RemoteException
+     */
+    void handleCallMessage(Message message) throws RemoteException;
 
 }

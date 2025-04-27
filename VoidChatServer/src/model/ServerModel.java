@@ -271,22 +271,44 @@ public class ServerModel extends UnicastRemoteObject implements ServerModelInt {
 
     @Override
     public synchronized void sendMsg(Message message) {
-        if (controller == null) {
-            System.err.println("Error: ServerController is null");
-            return;
+        if (message.getTo() == null) {
+            message.setTo(message.getFrom());
         }
 
         try {
-            if (message.getTo().startsWith("##")) {
+            // Store every message in database except for voice call signaling messages
+            if (message.getType() == null ||
+                    (!message.getType().equals("voice-call-request") &&
+                            !message.getType().equals("voice-call-accepted") &&
+                            !message.getType().equals("voice-call-rejected") &&
+                            !message.getType().equals("voice-call-end"))) {
+
+                insertMessage(message);
+            }
+
+            if (message.getTo().contains("##")) {
                 // This is a group message
-                // Let the controller handle group messages with in-memory data
                 controller.recieveMsg(message);
             } else {
-                // Regular direct message
-                insertMessage(message);
-                controller.recieveMsg(message);
+                // Get the client connection from controller
+                ClientModelInt receiverClient = controller.getConnection(message.getTo());
+
+                if (receiverClient != null) {
+                    // Handle voice call related messages
+                    if (message.getType() != null &&
+                            (message.getType().equals("voice-call-request") ||
+                                    message.getType().equals("voice-call-accepted") ||
+                                    message.getType().equals("voice-call-rejected") ||
+                                    message.getType().equals("voice-call-end"))) {
+
+                        receiverClient.handleCallMessage(message);
+                    } else {
+                        // Regular message
+                        receiverClient.reciveMsg(message);
+                    }
+                }
             }
-        } catch (Exception ex) {
+        } catch (RemoteException ex) {
             ex.printStackTrace();
         }
     }

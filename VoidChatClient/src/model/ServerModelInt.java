@@ -189,4 +189,44 @@ public interface ServerModelInt extends Remote, Notification {
      * @throws RemoteException
      */
     User refreshUser(String username) throws RemoteException;
+
+    boolean startVoiceCall(String caller, String receiver) throws RemoteException;
+
+    /**
+     * End a voice call between two users
+     *
+     * @param caller   The username of the caller
+     * @param receiver The username of the receiver
+     * @throws RemoteException
+     */
+    void endVoiceCall(String caller, String receiver) throws RemoteException;
+
+    /**
+     * Accept a voice call
+     *
+     * @param caller   The username of the caller
+     * @param receiver The username of the receiver
+     * @return true if call is accepted successfully
+     * @throws RemoteException
+     */
+    boolean acceptVoiceCall(String caller, String receiver) throws RemoteException;
+
+    /**
+     * Reject a voice call
+     *
+     * @param caller   The username of the caller
+     * @param receiver The username of the receiver
+     * @throws RemoteException
+     */
+    void rejectVoiceCall(String caller, String receiver) throws RemoteException;
+
+    /**
+     * Send voice data during a call
+     *
+     * @param sender    The username of the sender
+     * @param receiver  The username of the receiver
+     * @param voiceData The voice data to send
+     * @throws RemoteException
+     */
+    void sendVoiceData(String sender, String receiver, byte[] voiceData) throws RemoteException;
 }

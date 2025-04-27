@@ -535,4 +535,13 @@ public class ClientController implements ClientControllerInt {
         }
     }
 
+    /**
+     * Gets the server model interface
+     * 
+     * @return The server model interface
+     */
+    public ServerModelInt getServerModel() {
+        return serverModelInt;
+    }
+
 }

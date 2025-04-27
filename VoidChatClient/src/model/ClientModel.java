@@ -11,7 +11,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.ArrayList;
+
 import javafx.application.Platform;
 
 /**
@@ -162,5 +162,136 @@ public class ClientModel extends UnicastRemoteObject implements ClientModelInt, 
     public void receiveVoiceMessage(VoiceMessage voiceMessage) throws RemoteException {
         // Forward the received voice message to controller
         controller.receiveVoiceMessage(voiceMessage);
+    }
+
+    /**
+     * Receive audio data during a voice call
+     * 
+     * @param sender     The username of the sender
+     * @param audioData  The audio data bytes
+     * @param dataLength The length of valid data in the audioData array
+     * @throws RemoteException
+     */
+    @Override
+    public void receiveAudioData(String sender, byte[] audioData, int dataLength) throws RemoteException {
+        ClientView clientView = ClientView.getInstance();
+        if (clientView != null && clientView.chatBoxController != null) {
+            Platform.runLater(() -> {
+                clientView.chatBoxController.receiveAudioData(sender, audioData, dataLength);
+            });
+        }
+    }
+
+    /**
+     * Handle voice call related messages (requests, accepted, rejected, ended)
+     * 
+     * @param message The message containing call information
+     * @throws RemoteException
+     */
+    @Override
+    public void handleCallMessage(Message message) throws RemoteException {
+        ClientView clientView = ClientView.getInstance();
+        if (clientView != null) {
+            String messageType = message.getType();
+            String sender = message.getFrom();
+
+            Platform.runLater(() -> {
+                if (clientView.chatBoxController != null) {
+                    if (messageType.equals("voice-call-request")) {
+                        clientView.chatBoxController.receiveCallRequest(sender);
+                    } else if (messageType.equals("voice-call-accepted")) {
+                        clientView.chatBoxController.handleCallAccepted(sender);
+                    } else if (messageType.equals("voice-call-rejected")) {
+                        clientView.chatBoxController.handleCallRejected(sender);
+                    } else if (messageType.equals("voice-call-end")) {
+                        clientView.chatBoxController.handleCallEnded(sender);
+                    }
+                }
+            });
+        }
+    }
+
+    /**
+     * Receive voice call request
+     * 
+     * @param caller The username of the caller
+     * @throws RemoteException
+     */
+    @Override
+    public void receiveVoiceCallRequest(String caller) throws RemoteException {
+        ClientView clientView = ClientView.getInstance();
+        if (clientView != null && clientView.chatBoxController != null) {
+            Platform.runLater(() -> {
+                clientView.chatBoxController.receiveCallRequest(caller);
+            });
+        }
+    }
+
+    /**
+     * Receive voice call acceptance
+     *
+     * @param receiver The username of the receiver
+     * @throws RemoteException
+     */
+    @Override
+    public void receiveVoiceCallAcceptance(String receiver) throws RemoteException {
+        ClientView clientView = ClientView.getInstance();
+        if (clientView != null && clientView.chatBoxController != null) {
+            Platform.runLater(() -> {
+                clientView.chatBoxController.handleCallAccepted(receiver);
+            });
+        }
+    }
+
+    /**
+     * Receive voice call rejection
+     *
+     * @param receiver The username of the receiver
+     * @throws RemoteException
+     */
+    @Override
+    public void receiveVoiceCallRejection(String receiver) throws RemoteException {
+        ClientView clientView = ClientView.getInstance();
+        if (clientView != null && clientView.chatBoxController != null) {
+            Platform.runLater(() -> {
+                clientView.chatBoxController.handleCallRejected(receiver);
+            });
+        }
+    }
+
+    /**
+     * Receive voice call end notification
+     *
+     * @param otherUser The username of the other user
+     * @throws RemoteException
+     */
+    @Override
+    public void receiveVoiceCallEnd(String otherUser) throws RemoteException {
+        ClientView clientView = ClientView.getInstance();
+        if (clientView != null && clientView.chatBoxController != null) {
+            Platform.runLater(() -> {
+                clientView.chatBoxController.handleCallEnded(otherUser);
+            });
+        }
+    }
+
+    /**
+     * Receive voice data during a call
+     * 
+     * @param sender    The username of the sender
+     * @param voiceData The voice data
+     * @throws RemoteException
+     */
+    @Override
+    public void receiveVoiceData(String sender, byte[] voiceData) throws RemoteException {
+        ClientView clientView = ClientView.getInstance();
+        if (clientView != null && clientView.chatBoxController != null) {
+            Platform.runLater(() -> {
+                // This should be implemented if you have a method for handling voice data
+                // differently than audio data
+                // For now, we'll use receiveAudioData as they serve similar purposes
+                clientView.chatBoxController.receiveAudioData(sender, voiceData, voiceData.length);
+            });
+        }
     }
 }

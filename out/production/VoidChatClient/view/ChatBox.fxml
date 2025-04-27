@@ -21,153 +21,168 @@
 <?import javafx.scene.text.Text?>
 
 <VBox fx:id="chatBox" prefHeight="400.0" prefWidth="600.0" styleClass="background-pane" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="view.ChatBoxController">
-   <children>
-      <BorderPane prefHeight="52.0" prefWidth="600.0" styleClass="chat-header">
-         <center>
-            <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="10.0" BorderPane.alignment="CENTER">
-               <children>
-                  <ImageView fx:id="imgFriendStatus" fitHeight="35.0" fitWidth="35.0" pickOnBounds="true" preserveRatio="true">
-                     <image>
-                        <Image url="@../resouces/user.png" />
-                     </image>
-                  </ImageView>
-                  <VBox alignment="CENTER_LEFT">
-                     <children>
-                        <Label fx:id="labelFriendName" prefHeight="19.0" prefWidth="163.0" text="Friend Name" textFill="#4b4b4b">
-                           <font>
-                              <Font name="System Bold" size="14.0" />
-                           </font>
-                        </Label>
-                        <Label fx:id="labelFriendStatus" prefHeight="17.0" prefWidth="90.0" text="Offline" textFill="#6e6e6e">
-                           <font>
-                              <Font size="11.0" />
-                           </font>
-                        </Label>
-                     </children>
-                  </VBox>
-               </children>
-               <padding>
-                  <Insets left="10.0" />
-               </padding>
-            </HBox>
-         </center>
-      </BorderPane>
-      <AnchorPane VBox.vgrow="ALWAYS">
-         <children>
-            <ListView fx:id="listviewChat" layoutX="28.0" layoutY="42.0" prefHeight="259.0" prefWidth="600.0" styleClass="chat-list" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
-         </children>
-      </AnchorPane>
-      
-      <!-- Khu vực nhập tin nhắn - layout mới gồm thanh công cụ định dạng và dòng nhập liệu -->
-      <!-- 1. Thanh công cụ định dạng văn bản ở trên -->
-      <HBox alignment="CENTER_LEFT" prefHeight="30.0" spacing="2.0" style="-fx-background-color: #f8f8f8; -fx-border-color: #e0e0e0; -fx-border-width: 1 0 0 0;">
-          <padding>
-              <Insets bottom="2.0" left="8.0" right="8.0" top="2.0" />
-          </padding>
-          <children>
-              <ToggleButton fx:id="boldToggleBtn" mnemonicParsing="false" prefHeight="22.0" prefWidth="22.0" style="-fx-background-color: transparent; -fx-border-color: #dddddd; -fx-border-radius: 3;">
-                  <graphic>
-                      <Text style="-fx-font-weight: bold; -fx-font-size: 11;" text="B" />
-                  </graphic>
-                  <tooltip>
-                      <Tooltip text="In đậm (Ctrl+B)" />
-                  </tooltip>
-              </ToggleButton>
-              <ToggleButton fx:id="italicTogglebtn" mnemonicParsing="false" prefHeight="22.0" prefWidth="22.0" style="-fx-background-color: transparent; -fx-border-color: #dddddd; -fx-border-radius: 3;">
-                  <graphic>
-                      <Text style="-fx-font-style: italic; -fx-font-size: 11;" text="I" />
-                  </graphic>
-                  <tooltip>
-                      <Tooltip text="In nghiêng (Ctrl+I)" />
-                  </tooltip>
-              </ToggleButton>
-              <ToggleButton fx:id="lineToggleBtn" mnemonicParsing="false" prefHeight="22.0" prefWidth="22.0" style="-fx-background-color: transparent; -fx-border-color: #dddddd; -fx-border-radius: 3;">
-                  <graphic>
-                      <Text style="-fx-underline: true; -fx-font-size: 11;" text="U" />
-                  </graphic>
-                  <tooltip>
-                      <Tooltip text="Gạch chân (Ctrl+U)" />
-                  </tooltip>
-              </ToggleButton>
-              <Separator orientation="VERTICAL" prefHeight="22.0" />
-              <ComboBox fx:id="fontComboBox" prefHeight="22.0" prefWidth="90.0">
-                  <tooltip>
-                      <Tooltip text="Kiểu chữ" />
-                  </tooltip>
-              </ComboBox>
-              <ComboBox fx:id="fontSizeComboBox" prefHeight="22.0" prefWidth="45.0">
-                  <tooltip>
-                      <Tooltip text="Cỡ chữ" />
-                  </tooltip>
-              </ComboBox>
-              <ColorPicker fx:id="colorPicker" prefHeight="22.0" prefWidth="30.0">
-                  <tooltip>
-                      <Tooltip text="Màu chữ" />
-                  </tooltip>
-              </ColorPicker>
-          </children>
-      </HBox>
-      
-      <!-- 2. Dòng nhập tin nhắn + các nút chức năng cùng dòng -->
-      <HBox alignment="CENTER" prefHeight="40.0" spacing="5.0" style="-fx-background-color: #f5f5f5; -fx-border-color: #e0e0e0; -fx-border-width: 0 0 0 0;">
-          <padding>
-              <Insets bottom="6.0" left="8.0" right="8.0" top="6.0" />
-          </padding>
-          <children>
-              <TextArea fx:id="txtFieldMsg" onKeyPressed="#txtFieldOnKeyPressed" prefHeight="40.0" prefWidth="500.0" promptText="Nhập tin nhắn..." wrapText="true" style="-fx-border-radius: 18; -fx-border-color: #b3b3cc; -fx-border-width: 1;">
-                  <HBox.hgrow>ALWAYS</HBox.hgrow>
-              </TextArea>
-              <Button fx:id="btnEmoji" graphicTextGap="0.0" mnemonicParsing="false" onAction="#btnEmojiAction" prefHeight="30.0" prefWidth="30.0" styleClass="icon-button" style="-fx-background-color: transparent; -fx-border-color: #dddddd; -fx-border-radius: 15;">
-                  <graphic>
-                      <ImageView fitHeight="16.0" fitWidth="16.0" pickOnBounds="true" preserveRatio="true">
-                          <Image url="@../resouces/smile.png" />
-                      </ImageView>
-                  </graphic>
-                  <tooltip>
-                      <Tooltip text="Thêm emoji" />
-                  </tooltip>
-              </Button>
-              <Button fx:id="btnVoiceRecord" graphicTextGap="0.0" mnemonicParsing="false" onAction="#btnVoiceRecordAction" prefHeight="30.0" prefWidth="30.0" styleClass="icon-button" style="-fx-background-color: transparent; -fx-border-color: #dddddd; -fx-border-radius: 15;">
-                  <graphic>
-                      <ImageView fitHeight="16.0" fitWidth="16.0" pickOnBounds="true" preserveRatio="true">
-                          <Image url="@../resouces/mic.png" />
-                      </ImageView>
-                  </graphic>
-                  <tooltip>
-                      <Tooltip text="Ghi âm tin nhắn" />
-                  </tooltip>
-              </Button>
-              <Button fx:id="btnSendAttach" graphicTextGap="0.0" mnemonicParsing="false" onAction="#btnSendAttachAction" prefHeight="30.0" prefWidth="30.0" styleClass="icon-button" style="-fx-background-color: transparent; -fx-border-color: #dddddd; -fx-border-radius: 15;">
-                  <graphic>
-                      <ImageView fitHeight="16.0" fitWidth="16.0" pickOnBounds="true" preserveRatio="true">
-                          <Image url="@../resouces/clips.png" />
-                      </ImageView>
-                  </graphic>
-                  <tooltip>
-                      <Tooltip text="Gửi file đính kèm" />
-                  </tooltip>
-              </Button>
-              <Button fx:id="btnSendEmail" graphicTextGap="0.0" mnemonicParsing="false" onAction="#btnSendEmailAction" prefHeight="30.0" prefWidth="30.0" styleClass="icon-button" style="-fx-background-color: transparent; -fx-border-color: #dddddd; -fx-border-radius: 15;">
-                  <graphic>
-                      <ImageView fitHeight="16.0" fitWidth="16.0" pickOnBounds="true" preserveRatio="true">
-                          <Image url="@../resouces/email.png" />
-                      </ImageView>
-                  </graphic>
-                  <tooltip>
-                      <Tooltip text="Gửi email" />
-                  </tooltip>
-              </Button>
-              <Button fx:id="saveBtn" graphicTextGap="0.0" mnemonicParsing="false" onAction="#saveBtnAction" prefHeight="30.0" prefWidth="30.0" styleClass="icon-button" style="-fx-background-color: transparent; -fx-border-color: #dddddd; -fx-border-radius: 15;">
-                  <graphic>
-                      <ImageView fitHeight="16.0" fitWidth="16.0" pickOnBounds="true" preserveRatio="true">
-                          <Image url="@../resouces/save.png" />
-                      </ImageView>
-                  </graphic>
-                  <tooltip>
-                      <Tooltip text="Lưu tin nhắn" />
-                  </tooltip>
-              </Button>
-          </children>
-      </HBox>
-   </children>
+    <children>
+        <BorderPane prefHeight="52.0" prefWidth="600.0" styleClass="chat-header">
+            <center>
+                <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="10.0" BorderPane.alignment="CENTER">
+                    <children>
+                        <ImageView fx:id="imgFriendStatus" fitHeight="35.0" fitWidth="35.0" pickOnBounds="true" preserveRatio="true">
+                            <image>
+                                <Image url="@../resouces/user.png" />
+                            </image>
+                        </ImageView>
+                        <VBox alignment="CENTER_LEFT">
+                            <children>
+                                <Label fx:id="labelFriendName" prefHeight="19.0" prefWidth="163.0" text="Friend Name" textFill="#4b4b4b">
+                                    <font>
+                                        <Font name="System Bold" size="14.0" />
+                                    </font>
+                                </Label>
+                                <Label fx:id="labelFriendStatus" prefHeight="17.0" prefWidth="90.0" text="Offline" textFill="#6e6e6e">
+                                    <font>
+                                        <Font size="11.0" />
+                                    </font>
+                                </Label>
+                            </children>
+                        </VBox>
+                    </children>
+                    <padding>
+                        <Insets left="10.0" />
+                    </padding>
+                </HBox>
+            </center>
+            <right>
+                <Button fx:id="btnVoiceCall" mnemonicParsing="false" onAction="#btnVoiceCallAction" prefHeight="30.0" prefWidth="30.0"
+                        styleClass="icon-button"
+                        style="-fx-background-color: transparent; -fx-border-color: #dddddd; -fx-border-radius: 15;">
+                    <graphic>
+                        <ImageView fitHeight="18.0" fitWidth="18.0" pickOnBounds="true" preserveRatio="true" smooth="true">
+                            <Image url="@../resouces/call.png" />
+                        </ImageView>
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="Gọi thoại" />
+                    </tooltip>
+                </Button>
+            </right>
+
+        </BorderPane>
+        <AnchorPane VBox.vgrow="ALWAYS">
+            <children>
+                <ListView fx:id="listviewChat" layoutX="28.0" layoutY="42.0" prefHeight="259.0" prefWidth="600.0" styleClass="chat-list" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+            </children>
+        </AnchorPane>
+
+        <!-- Khu vực nhập tin nhắn - layout mới gồm thanh công cụ định dạng và dòng nhập liệu -->
+        <!-- 1. Thanh công cụ định dạng văn bản ở trên -->
+        <HBox alignment="CENTER_LEFT" prefHeight="30.0" spacing="2.0" style="-fx-background-color: #f8f8f8; -fx-border-color: #e0e0e0; -fx-border-width: 1 0 0 0;">
+            <padding>
+                <Insets bottom="2.0" left="8.0" right="8.0" top="2.0" />
+            </padding>
+            <children>
+                <ToggleButton fx:id="boldToggleBtn" mnemonicParsing="false" prefHeight="22.0" prefWidth="22.0" style="-fx-background-color: transparent; -fx-border-color: #dddddd; -fx-border-radius: 3;">
+                    <graphic>
+                        <Text style="-fx-font-weight: bold; -fx-font-size: 11;" text="B" />
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="In đậm (Ctrl+B)" />
+                    </tooltip>
+                </ToggleButton>
+                <ToggleButton fx:id="italicTogglebtn" mnemonicParsing="false" prefHeight="22.0" prefWidth="22.0" style="-fx-background-color: transparent; -fx-border-color: #dddddd; -fx-border-radius: 3;">
+                    <graphic>
+                        <Text style="-fx-font-style: italic; -fx-font-size: 11;" text="I" />
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="In nghiêng (Ctrl+I)" />
+                    </tooltip>
+                </ToggleButton>
+                <ToggleButton fx:id="lineToggleBtn" mnemonicParsing="false" prefHeight="22.0" prefWidth="22.0" style="-fx-background-color: transparent; -fx-border-color: #dddddd; -fx-border-radius: 3;">
+                    <graphic>
+                        <Text style="-fx-underline: true; -fx-font-size: 11;" text="U" />
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="Gạch chân (Ctrl+U)" />
+                    </tooltip>
+                </ToggleButton>
+                <Separator orientation="VERTICAL" prefHeight="22.0" />
+                <ComboBox fx:id="fontComboBox" prefHeight="22.0" prefWidth="90.0">
+                    <tooltip>
+                        <Tooltip text="Kiểu chữ" />
+                    </tooltip>
+                </ComboBox>
+                <ComboBox fx:id="fontSizeComboBox" prefHeight="22.0" prefWidth="45.0">
+                    <tooltip>
+                        <Tooltip text="Cỡ chữ" />
+                    </tooltip>
+                </ComboBox>
+                <ColorPicker fx:id="colorPicker" prefHeight="22.0" prefWidth="30.0">
+                    <tooltip>
+                        <Tooltip text="Màu chữ" />
+                    </tooltip>
+                </ColorPicker>
+            </children>
+        </HBox>
+
+        <!-- 2. Dòng nhập tin nhắn + các nút chức năng cùng dòng -->
+        <HBox alignment="CENTER" prefHeight="40.0" spacing="5.0" style="-fx-background-color: #f5f5f5; -fx-border-color: #e0e0e0; -fx-border-width: 0 0 0 0;">
+            <padding>
+                <Insets bottom="6.0" left="8.0" right="8.0" top="6.0" />
+            </padding>
+            <children>
+                <TextArea fx:id="txtFieldMsg" onKeyPressed="#txtFieldOnKeyPressed" prefHeight="40.0" prefWidth="500.0" promptText="Nhập tin nhắn..." wrapText="true" style="-fx-border-radius: 18; -fx-border-color: #b3b3cc; -fx-border-width: 1;">
+                    <HBox.hgrow>ALWAYS</HBox.hgrow>
+                </TextArea>
+                <Button fx:id="btnEmoji" graphicTextGap="0.0" mnemonicParsing="false" onAction="#btnEmojiAction" prefHeight="30.0" prefWidth="30.0" styleClass="icon-button" style="-fx-background-color: transparent; -fx-border-color: #dddddd; -fx-border-radius: 15;">
+                    <graphic>
+                        <ImageView fitHeight="16.0" fitWidth="16.0" pickOnBounds="true" preserveRatio="true">
+                            <Image url="@../resouces/smile.png" />
+                        </ImageView>
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="Thêm emoji" />
+                    </tooltip>
+                </Button>
+                <Button fx:id="btnVoiceRecord" graphicTextGap="0.0" mnemonicParsing="false" onAction="#btnVoiceRecordAction" prefHeight="30.0" prefWidth="30.0" styleClass="icon-button" style="-fx-background-color: transparent; -fx-border-color: #dddddd; -fx-border-radius: 15;">
+                    <graphic>
+                        <ImageView fitHeight="16.0" fitWidth="16.0" pickOnBounds="true" preserveRatio="true">
+                            <Image url="@../resouces/mic.png" />
+                        </ImageView>
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="Ghi âm tin nhắn" />
+                    </tooltip>
+                </Button>
+                <Button fx:id="btnSendAttach" graphicTextGap="0.0" mnemonicParsing="false" onAction="#btnSendAttachAction" prefHeight="30.0" prefWidth="30.0" styleClass="icon-button" style="-fx-background-color: transparent; -fx-border-color: #dddddd; -fx-border-radius: 15;">
+                    <graphic>
+                        <ImageView fitHeight="16.0" fitWidth="16.0" pickOnBounds="true" preserveRatio="true">
+                            <Image url="@../resouces/clips.png" />
+                        </ImageView>
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="Gửi file đính kèm" />
+                    </tooltip>
+                </Button>
+                <Button fx:id="btnSendEmail" graphicTextGap="0.0" mnemonicParsing="false" onAction="#btnSendEmailAction" prefHeight="30.0" prefWidth="30.0" styleClass="icon-button" style="-fx-background-color: transparent; -fx-border-color: #dddddd; -fx-border-radius: 15;">
+                    <graphic>
+                        <ImageView fitHeight="16.0" fitWidth="16.0" pickOnBounds="true" preserveRatio="true">
+                            <Image url="@../resouces/email.png" />
+                        </ImageView>
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="Gửi email" />
+                    </tooltip>
+                </Button>
+                <Button fx:id="saveBtn" graphicTextGap="0.0" mnemonicParsing="false" onAction="#saveBtnAction" prefHeight="30.0" prefWidth="30.0" styleClass="icon-button" style="-fx-background-color: transparent; -fx-border-color: #dddddd; -fx-border-radius: 15;">
+                    <graphic>
+                        <ImageView fitHeight="16.0" fitWidth="16.0" pickOnBounds="true" preserveRatio="true">
+                            <Image url="@../resouces/save.png" />
+                        </ImageView>
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="Lưu tin nhắn" />
+                    </tooltip>
+                </Button>
+            </children>
+        </HBox>
+    </children>
 </VBox>

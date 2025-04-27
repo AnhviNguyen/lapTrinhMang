@@ -70,6 +70,8 @@ import javafx.scene.control.Alert;
 import javafx.util.Duration;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ListCell;
+import java.util.Optional;
+import javafx.scene.control.ButtonType;
 
 /**
  * FXML Controller class
@@ -123,6 +125,9 @@ public class ChatBoxController implements Initializable {
     @FXML
     private Button btnVoiceRecord;
 
+    @FXML
+    private Button btnVoiceCall; // Add declaration for voice call button
+
     // Voice recording related fields
     private AudioRecorder audioRecorder;
     private boolean isRecording = false;
@@ -131,6 +136,13 @@ public class ChatBoxController implements Initializable {
     private int recordingDuration = 0;
     private Label recordingTimeLabel;
     private HBox recordingIndicator;
+
+    // For voice call
+    private boolean isCallActive = false;
+    private javax.sound.sampled.TargetDataLine microphone;
+    private javax.sound.sampled.SourceDataLine speakers;
+    private Thread callThread;
+    private boolean callThreadRunning = false;
 
     ClientView clientView;
     String receiver;
@@ -2400,6 +2412,11 @@ public class ChatBoxController implements Initializable {
                         .findFirst().orElse(null)).cleanup();
             }
         }
+
+        // Ensure voice call resources are properly closed
+        if (isCallActive) {
+            endVoiceCall();
+        }
     }
 
     public void updateFriendStatus(String username, String status) {
@@ -2455,5 +2472,334 @@ public class ChatBoxController implements Initializable {
                 ex.printStackTrace();
             }
         }
+    }
+
+    /**
+     * Voice Call button action event handler
+     */
+    @FXML
+    private void btnVoiceCallAction(ActionEvent event) {
+        if (!isCallActive) {
+            // Initiate call
+            initiateVoiceCall();
+        } else {
+            // End call
+            endVoiceCall();
+        }
+    }
+
+    /**
+     * Initiate a voice call to the current chat recipient
+     */
+    private void initiateVoiceCall() {
+        try {
+            // Update UI to show call in progress
+            updateCallButtonAppearance(true);
+
+            // Create call request message to send to the server
+            String callMessage = "VOICE_CALL_REQUEST";
+            Message callRequest = new Message();
+            callRequest.setFrom(clientView.getUsername());
+            callRequest.setTo(receiver);
+            callRequest.setContent(callMessage);
+            callRequest.setType("voice-call-request");
+
+            // Send the call request through RMI
+            clientView.sendMessage(callRequest);
+
+            // Show notification
+            showAlert("Cuộc gọi", "Đang gọi " + receiver + "...");
+
+        } catch (Exception ex) {
+            Logger.getLogger(ChatBoxController.class.getName()).log(Level.SEVERE, null, ex);
+            showAlert("Lỗi", "Không thể bắt đầu cuộc gọi: " + ex.getMessage());
+            updateCallButtonAppearance(false);
+        }
+    }
+
+    /**
+     * End an active voice call
+     */
+    private void endVoiceCall() {
+        try {
+            // Stop the call
+            if (callThreadRunning && callThread != null) {
+                callThreadRunning = false;
+                callThread.interrupt();
+                callThread = null;
+            }
+
+            // Close audio resources
+            closeAudioResources();
+
+            // Update UI to show call ended
+            updateCallButtonAppearance(false);
+
+            // Send call end notification
+            Message callEndMsg = new Message();
+            callEndMsg.setFrom(clientView.getUsername());
+            callEndMsg.setTo(receiver);
+            callEndMsg.setContent("VOICE_CALL_END");
+            callEndMsg.setType("voice-call-end");
+            clientView.sendMessage(callEndMsg);
+
+        } catch (Exception ex) {
+            Logger.getLogger(ChatBoxController.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    /**
+     * Handle an incoming voice call request
+     */
+    public void receiveCallRequest(String caller) {
+        Platform.runLater(() -> {
+            // Show incoming call alert with accept/reject options
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.setTitle("Cuộc gọi đến");
+            alert.setHeaderText("Cuộc gọi từ " + caller);
+            alert.setContentText("Bạn có muốn nhận cuộc gọi không?");
+
+            // Customize buttons
+            ((Button) alert.getDialogPane().lookupButton(ButtonType.OK)).setText("Nhận");
+            ((Button) alert.getDialogPane().lookupButton(ButtonType.CANCEL)).setText("Từ chối");
+
+            Optional<ButtonType> result = alert.showAndWait();
+            if (result.isPresent() && result.get() == ButtonType.OK) {
+                // Accept call
+                acceptIncomingCall(caller);
+            } else {
+                // Reject call
+                rejectIncomingCall(caller);
+            }
+        });
+    }
+
+    /**
+     * Accept an incoming voice call
+     */
+    private void acceptIncomingCall(String caller) {
+        try {
+            // Update UI
+            updateCallButtonAppearance(true);
+
+            // Send acceptance message
+            Message acceptMsg = new Message();
+            acceptMsg.setFrom(clientView.getUsername());
+            acceptMsg.setTo(caller);
+            acceptMsg.setContent("VOICE_CALL_ACCEPTED");
+            acceptMsg.setType("voice-call-accepted");
+            clientView.sendMessage(acceptMsg);
+
+            // Start audio streaming
+            startVoiceStreaming(caller);
+
+        } catch (Exception ex) {
+            Logger.getLogger(ChatBoxController.class.getName()).log(Level.SEVERE, null, ex);
+            showAlert("Lỗi", "Không thể bắt đầu cuộc gọi: " + ex.getMessage());
+            updateCallButtonAppearance(false);
+        }
+    }
+
+    /**
+     * Reject an incoming voice call
+     */
+    private void rejectIncomingCall(String caller) {
+        try {
+            // Send rejection message
+            Message rejectMsg = new Message();
+            rejectMsg.setFrom(clientView.getUsername());
+            rejectMsg.setTo(caller);
+            rejectMsg.setContent("VOICE_CALL_REJECTED");
+            rejectMsg.setType("voice-call-rejected");
+            clientView.sendMessage(rejectMsg);
+
+        } catch (Exception ex) {
+            Logger.getLogger(ChatBoxController.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    /**
+     * Handle call accepted response
+     */
+    public void handleCallAccepted(String callee) {
+        Platform.runLater(() -> {
+            showAlert("Cuộc gọi", callee + " đã nhận cuộc gọi");
+            // Start audio streaming
+            startVoiceStreaming(callee);
+        });
+    }
+
+    /**
+     * Handle call rejected response
+     */
+    public void handleCallRejected(String callee) {
+        Platform.runLater(() -> {
+            showAlert("Cuộc gọi", callee + " đã từ chối cuộc gọi");
+            updateCallButtonAppearance(false);
+        });
+    }
+
+    /**
+     * Handle call ended by the other party
+     */
+    public void handleCallEnded(String otherParty) {
+        Platform.runLater(() -> {
+            if (isCallActive) {
+                showAlert("Cuộc gọi", "Cuộc gọi đã kết thúc");
+
+                // Stop the call thread
+                if (callThreadRunning && callThread != null) {
+                    callThreadRunning = false;
+                    callThread.interrupt();
+                    callThread = null;
+                }
+
+                // Close audio resources
+                closeAudioResources();
+
+                // Update UI
+                updateCallButtonAppearance(false);
+            }
+        });
+    }
+
+    /**
+     * Start voice streaming (audio transmission) for a call
+     */
+    private void startVoiceStreaming(String otherParty) {
+        try {
+            // Set up audio format for transmission
+            javax.sound.sampled.AudioFormat format = new javax.sound.sampled.AudioFormat(8000.0f, 16, 1, true, true);
+
+            // Set up microphone (capture)
+            javax.sound.sampled.DataLine.Info micInfo = new javax.sound.sampled.DataLine.Info(
+                    javax.sound.sampled.TargetDataLine.class, format);
+            microphone = (javax.sound.sampled.TargetDataLine) javax.sound.sampled.AudioSystem.getLine(micInfo);
+            microphone.open(format);
+            microphone.start();
+
+            // Set up speakers (playback)
+            javax.sound.sampled.DataLine.Info speakerInfo = new javax.sound.sampled.DataLine.Info(
+                    javax.sound.sampled.SourceDataLine.class, format);
+            speakers = (javax.sound.sampled.SourceDataLine) javax.sound.sampled.AudioSystem.getLine(speakerInfo);
+            speakers.open(format);
+            speakers.start();
+
+            // Start audio transmission thread
+            callThreadRunning = true;
+            callThread = new Thread(() -> {
+                try {
+                    byte[] buffer = new byte[1024];
+                    while (callThreadRunning) {
+                        // Read from microphone
+                        int bytesRead = microphone.read(buffer, 0, buffer.length);
+
+                        if (bytesRead > 0) {
+                            // Send audio data to other party via RMI
+                            sendAudioData(otherParty, buffer, bytesRead);
+                        }
+
+                        // Small delay to prevent overwhelming the network
+                        Thread.sleep(10);
+                    }
+                } catch (InterruptedException ex) {
+                    // Expected during normal thread shutdown
+                } catch (Exception ex) {
+                    Logger.getLogger(ChatBoxController.class.getName()).log(Level.SEVERE, null, ex);
+                    Platform.runLater(() -> {
+                        showAlert("Lỗi", "Lỗi trong quá trình thực hiện cuộc gọi: " + ex.getMessage());
+                        endVoiceCall();
+                    });
+                }
+            });
+            callThread.setDaemon(true);
+            callThread.start();
+
+        } catch (Exception ex) {
+            Logger.getLogger(ChatBoxController.class.getName()).log(Level.SEVERE, null, ex);
+            showAlert("Lỗi", "Không thể thiết lập luồng âm thanh: " + ex.getMessage());
+            endVoiceCall();
+        }
+    }
+
+    /**
+     * Send audio data to the other party in the call
+     */
+    private void sendAudioData(String receiver, byte[] audioData, int length) {
+        try {
+            // Create a copy of the data to prevent modification
+            byte[] dataCopy = new byte[length];
+            System.arraycopy(audioData, 0, dataCopy, 0, length);
+
+            // Get the remote client object
+            ClientModelInt receiverClient = clientView.getServerModel().getConnection(receiver);
+
+            // Send the audio data
+            if (receiverClient != null) {
+                receiverClient.receiveAudioData(clientView.getUsername(), dataCopy, length);
+            }
+        } catch (Exception ex) {
+            Logger.getLogger(ChatBoxController.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    /**
+     * Receive audio data from the other party and play it
+     */
+    public void receiveAudioData(String sender, byte[] audioData, int length) {
+        if (isCallActive && speakers != null && speakers.isOpen()) {
+            // Write the received audio data to the speakers
+            speakers.write(audioData, 0, length);
+        }
+    }
+
+    /**
+     * Close audio resources
+     */
+    private void closeAudioResources() {
+        // Close microphone if open
+        if (microphone != null && microphone.isOpen()) {
+            microphone.stop();
+            microphone.close();
+            microphone = null;
+        }
+
+        // Close speakers if open
+        if (speakers != null && speakers.isOpen()) {
+            speakers.stop();
+            speakers.drain();
+            speakers.close();
+            speakers = null;
+        }
+
+        isCallActive = false;
+    }
+
+    /**
+     * Update the call button appearance based on call state
+     */
+    private void updateCallButtonAppearance(boolean isActive) {
+        Platform.runLater(() -> {
+            isCallActive = isActive;
+
+            if (isActive) {
+                // Change button appearance for active call
+                btnVoiceCall
+                        .setStyle("-fx-background-color: #ff4d4d; -fx-border-color: #cc0000; -fx-border-radius: 15;");
+
+                // Change tooltip
+                Tooltip tooltip = new Tooltip("Kết thúc cuộc gọi");
+                btnVoiceCall.setTooltip(tooltip);
+
+            } else {
+                // Reset button appearance
+                btnVoiceCall.setStyle(
+                        "-fx-background-color: transparent; -fx-border-color: #dddddd; -fx-border-radius: 15;");
+
+                // Reset tooltip
+                Tooltip tooltip = new Tooltip("Gọi thoại");
+                btnVoiceCall.setTooltip(tooltip);
+            }
+        });
     }
 }

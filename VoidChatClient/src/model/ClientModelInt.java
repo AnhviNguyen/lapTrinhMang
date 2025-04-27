@@ -83,4 +83,31 @@ public interface ClientModelInt extends Remote {
    */
   void receiveVoiceMessage(VoiceMessage voiceMessage) throws RemoteException;
 
+  /**
+   * Receive audio data during a voice call
+   * 
+   * @param sender     The username of the sender
+   * @param audioData  The audio data bytes
+   * @param dataLength The length of valid data in the audioData array
+   * @throws RemoteException
+   */
+  void receiveAudioData(String sender, byte[] audioData, int dataLength) throws RemoteException;
+
+  /**
+   * Handle voice call related messages (requests, accepted, rejected, ended)
+   * 
+   * @param message The message containing call information
+   * @throws RemoteException
+   */
+  void handleCallMessage(Message message) throws RemoteException;
+
+  void receiveVoiceCallRequest(String caller) throws RemoteException;
+
+  void receiveVoiceCallAcceptance(String receiver) throws RemoteException;
+
+  void receiveVoiceCallRejection(String receiver) throws RemoteException;
+
+  void receiveVoiceCallEnd(String otherUser) throws RemoteException;
+
+  void receiveVoiceData(String sender, byte[] voiceData) throws RemoteException;
 }

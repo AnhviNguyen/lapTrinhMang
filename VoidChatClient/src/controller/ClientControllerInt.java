@@ -5,6 +5,7 @@ import java.rmi.RemoteException;
 import java.util.ArrayList;
 import model.ClientModelInt;
 import model.Message;
+import model.ServerModelInt;
 import model.User;
 import model.VoiceMessage;
 import utilitez.Pair;
@@ -184,4 +185,11 @@ public interface ClientControllerInt {
      * @param voiceMessage The voice message that was received
      */
     void receiveVoiceMessage(VoiceMessage voiceMessage);
+
+    /**
+     * Gets the server model interface
+     * 
+     * @return The server model interface
+     */
+    ServerModelInt getServerModel();
 }
