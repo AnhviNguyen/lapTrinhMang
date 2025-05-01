@@ -72,6 +72,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.ListCell;
 import java.util.Optional;
 import javafx.scene.control.ButtonType;
+import java.io.FileOutputStream;
 
 /**
  * FXML Controller class
@@ -2489,29 +2490,52 @@ public class ChatBoxController implements Initializable {
     }
 
     /**
-     * Initiate a voice call to the current chat recipient
+     * Bắt đầu cuộc gọi thoại với người dùng hiện tại
      */
     private void initiateVoiceCall() {
         try {
-            // Update UI to show call in progress
+            System.out.println("Initiating voice call with: " + receiver);
+
+            // Chạy test âm thanh trước khi thực hiện cuộc gọi
+            testAudioDevices();
+
+            // Kiểm tra thiết bị âm thanh trước khi thực hiện cuộc gọi
+            if (!checkAudioDevices()) {
+                showAlert("Lỗi thiết bị âm thanh",
+                        "Không thể truy cập microphone hoặc loa. Vui lòng kiểm tra thiết bị âm thanh của bạn.");
+                return;
+            }
+
+            // Chắc chắn rằng receiver không rỗng
+            if (receiver == null || receiver.isEmpty()) {
+                System.out.println("ERROR: Cannot start call with empty receiver");
+                showAlert("Lỗi", "Không thể bắt đầu cuộc gọi với người dùng không xác định.");
+                return;
+            }
+
+            // Lấy kết nối tới người nhận
+            ClientModelInt receiverClient = clientView.getServerModel().getConnection(receiver);
+
+            if (receiverClient == null) {
+                System.out.println("ERROR: Cannot get connection to " + receiver);
+                showAlert("Người dùng không trực tuyến",
+                        receiver + " không trực tuyến hoặc không thể kết nối. Vui lòng thử lại sau.");
+                return;
+            }
+
+            // Hiển thị thông báo đang thực hiện cuộc gọi
+            showAlert("Đang gọi", "Đang gọi cho " + receiver + "...");
+
+            // Cập nhật giao diện nút gọi
             updateCallButtonAppearance(true);
 
-            // Create call request message to send to the server
-            String callMessage = "VOICE_CALL_REQUEST";
-            Message callRequest = new Message();
-            callRequest.setFrom(clientView.getUsername());
-            callRequest.setTo(receiver);
-            callRequest.setContent(callMessage);
-            callRequest.setType("voice-call-request");
+            // Gửi yêu cầu cuộc gọi
+            receiverClient.receiveVoiceCallRequest(clientView.getUsername());
 
-            // Send the call request through RMI
-            clientView.sendMessage(callRequest);
-
-            // Show notification
-            showAlert("Cuộc gọi", "Đang gọi " + receiver + "...");
-
+            System.out.println("Voice call request sent to " + receiver);
         } catch (Exception ex) {
-            Logger.getLogger(ChatBoxController.class.getName()).log(Level.SEVERE, null, ex);
+            System.out.println("ERROR initiating voice call: " + ex.getMessage());
+            ex.printStackTrace();
             showAlert("Lỗi", "Không thể bắt đầu cuộc gọi: " + ex.getMessage());
             updateCallButtonAppearance(false);
         }
@@ -2591,7 +2615,7 @@ public class ChatBoxController implements Initializable {
             clientView.sendMessage(acceptMsg);
 
             // Start audio streaming
-            startVoiceStreaming(caller);
+            startEnhancedVoiceStreaming(caller);
 
         } catch (Exception ex) {
             Logger.getLogger(ChatBoxController.class.getName()).log(Level.SEVERE, null, ex);
@@ -2625,7 +2649,7 @@ public class ChatBoxController implements Initializable {
         Platform.runLater(() -> {
             showAlert("Cuộc gọi", callee + " đã nhận cuộc gọi");
             // Start audio streaming
-            startVoiceStreaming(callee);
+            startEnhancedVoiceStreaming(callee);
         });
     }
 
@@ -2668,28 +2692,70 @@ public class ChatBoxController implements Initializable {
      */
     private void startVoiceStreaming(String otherParty) {
         try {
+            System.out.println("Starting voice streaming with " + otherParty);
+
             // Set up audio format for transmission
-            javax.sound.sampled.AudioFormat format = new javax.sound.sampled.AudioFormat(8000.0f, 16, 1, true, true);
+            // Sử dụng định dạng âm thanh phổ biến hơn: 44.1kHz, 16 bit, mono
+            javax.sound.sampled.AudioFormat format = new javax.sound.sampled.AudioFormat(
+                    44100.0f, // Sample rate 44.1kHz - chất lượng cao hơn
+                    16, // Sample size 16 bits
+                    1, // Mono channel
+                    true, // Signed
+                    false); // Little Endian - phổ biến hơn
+
+            System.out.println("Audio format: " + format.toString());
 
             // Set up microphone (capture)
             javax.sound.sampled.DataLine.Info micInfo = new javax.sound.sampled.DataLine.Info(
                     javax.sound.sampled.TargetDataLine.class, format);
+
+            if (!javax.sound.sampled.AudioSystem.isLineSupported(micInfo)) {
+                System.out.println("ERROR: Microphone line not supported!");
+                showAlert("Lỗi", "Microphone không được hỗ trợ. Kiểm tra thiết bị âm thanh của bạn.");
+                endVoiceCall();
+                return;
+            }
+
             microphone = (javax.sound.sampled.TargetDataLine) javax.sound.sampled.AudioSystem.getLine(micInfo);
             microphone.open(format);
             microphone.start();
+            System.out.println("Microphone started: " + microphone.isRunning());
 
             // Set up speakers (playback)
             javax.sound.sampled.DataLine.Info speakerInfo = new javax.sound.sampled.DataLine.Info(
                     javax.sound.sampled.SourceDataLine.class, format);
+
+            if (!javax.sound.sampled.AudioSystem.isLineSupported(speakerInfo)) {
+                System.out.println("ERROR: Speaker line not supported!");
+                showAlert("Lỗi", "Loa không được hỗ trợ. Kiểm tra thiết bị âm thanh của bạn.");
+                endVoiceCall();
+                return;
+            }
+
             speakers = (javax.sound.sampled.SourceDataLine) javax.sound.sampled.AudioSystem.getLine(speakerInfo);
             speakers.open(format);
             speakers.start();
+            System.out.println("Speakers started: " + speakers.isActive());
+
+            // Update UI to show active call
+            updateCallButtonAppearance(true);
+            isCallActive = true;
+
+            // Hiển thị thông báo cuộc gọi đang hoạt động
+            Platform.runLater(() -> {
+                showAlert("Cuộc gọi", "Cuộc gọi đang hoạt động. Bạn có thể nói chuyện bây giờ.");
+            });
 
             // Start audio transmission thread
             callThreadRunning = true;
             callThread = new Thread(() -> {
                 try {
-                    byte[] buffer = new byte[1024];
+                    // Sử dụng buffer lớn hơn để truyền nhiều dữ liệu hơn mỗi lần
+                    byte[] buffer = new byte[4096];
+                    int packetsCount = 0;
+
+                    System.out.println("Audio thread started - beginning transmission");
+
                     while (callThreadRunning) {
                         // Read from microphone
                         int bytesRead = microphone.read(buffer, 0, buffer.length);
@@ -2697,14 +2763,23 @@ public class ChatBoxController implements Initializable {
                         if (bytesRead > 0) {
                             // Send audio data to other party via RMI
                             sendAudioData(otherParty, buffer, bytesRead);
+                            packetsCount++;
+
+                            // Log every 100 packets để tránh log quá nhiều
+                            if (packetsCount % 100 == 0) {
+                                System.out.println(
+                                        "Sent " + packetsCount + " audio packets, last size: " + bytesRead + " bytes");
+                            }
                         }
 
                         // Small delay to prevent overwhelming the network
-                        Thread.sleep(10);
+                        Thread.sleep(5);
                     }
                 } catch (InterruptedException ex) {
-                    // Expected during normal thread shutdown
+                    System.out.println("Audio thread interrupted - expected during shutdown");
                 } catch (Exception ex) {
+                    System.out.println("ERROR in audio thread: " + ex.getMessage());
+                    ex.printStackTrace();
                     Logger.getLogger(ChatBoxController.class.getName()).log(Level.SEVERE, null, ex);
                     Platform.runLater(() -> {
                         showAlert("Lỗi", "Lỗi trong quá trình thực hiện cuộc gọi: " + ex.getMessage());
@@ -2716,6 +2791,8 @@ public class ChatBoxController implements Initializable {
             callThread.start();
 
         } catch (Exception ex) {
+            System.out.println("ERROR setting up voice streaming: " + ex.getMessage());
+            ex.printStackTrace();
             Logger.getLogger(ChatBoxController.class.getName()).log(Level.SEVERE, null, ex);
             showAlert("Lỗi", "Không thể thiết lập luồng âm thanh: " + ex.getMessage());
             endVoiceCall();
@@ -2727,6 +2804,37 @@ public class ChatBoxController implements Initializable {
      */
     private void sendAudioData(String receiver, byte[] audioData, int length) {
         try {
+            // Kiểm tra dữ liệu âm thanh trước khi gửi
+            boolean hasAudioContent = false;
+            for (int i = 0; i < Math.min(length, 100); i++) {
+                if (audioData[i] != 0) {
+                    hasAudioContent = true;
+                    break;
+                }
+            }
+
+            if (!hasAudioContent) {
+                emptyPacketsCount++;
+
+                if (emptyPacketsCount % 100 == 0) {
+                    System.out.println("WARNING: Sending empty audio packet (all zeros) - check your microphone!");
+                }
+
+                // Tạo dữ liệu test để đảm bảo có âm thanh
+                if (emptyPacketsCount % 50 == 0) {
+                    // Tạo sóng sine đơn giản như âm thanh test
+                    generateTestTone(audioData, length);
+                    System.out.println("Generated test tone to verify audio pathway");
+                    hasAudioContent = true;
+                }
+            }
+
+            // Nếu có dữ liệu âm thanh thực sự, tính mức độ
+            if (hasAudioContent && sentPacketsCount % 100 == 0) {
+                double avgLevel = calculateAudioLevel(audioData, length);
+                System.out.println("Outgoing audio level: " + avgLevel);
+            }
+
             // Create a copy of the data to prevent modification
             byte[] dataCopy = new byte[length];
             System.arraycopy(audioData, 0, dataCopy, 0, length);
@@ -2737,69 +2845,631 @@ public class ChatBoxController implements Initializable {
             // Send the audio data
             if (receiverClient != null) {
                 receiverClient.receiveAudioData(clientView.getUsername(), dataCopy, length);
+                sentPacketsCount++;
+
+                // Log every 100 packets
+                if (sentPacketsCount % 100 == 0) {
+                    System.out.println("Sent " + sentPacketsCount + " audio packets, last size: " + length + " bytes");
+                }
+            } else {
+                System.out.println("WARNING: Cannot get connection to " + receiver);
             }
         } catch (Exception ex) {
+            System.out.println("ERROR sending audio data: " + ex.getMessage());
             Logger.getLogger(ChatBoxController.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+
+    // Đếm số gói tin đã gửi
+    private static int sentPacketsCount = 0;
+
+    // Đếm số gói tin rỗng
+    private static int emptyPacketsCount = 0;
+
+    /**
+     * Tạo âm thanh test (sóng sine đơn giản)
+     */
+    private void generateTestTone(byte[] buffer, int length) {
+        // Tạo sóng sine với tần số 440Hz (note A)
+        double freq = 440.0; // Hz
+        double sampleRate = 44100.0; // samples per second
+
+        for (int i = 0; i < length - 1; i += 2) {
+            double time = (double) (sentPacketsCount * length + i) / sampleRate;
+            double amplitude = 0.3; // volume level (0.0-1.0)
+
+            // Sóng sine đơn giản
+            double value = Math.sin(2.0 * Math.PI * freq * time) * amplitude * 32767.0;
+
+            short sample = (short) value;
+
+            // Ghi vào buffer (little endian)
+            buffer[i] = (byte) (sample & 0xFF);
+            buffer[i + 1] = (byte) ((sample >> 8) & 0xFF);
+        }
+    }
+
+    /**
+     * Thử nghiệm xem microphone và loa có hoạt động không bằng cách phát âm thanh
+     * test
+     * và tạo file test
+     */
+    private void testAudioDevices() {
+        try {
+            System.out.println("====== AUDIO DEVICE TEST ======");
+
+            // Tạo định dạng âm thanh
+            javax.sound.sampled.AudioFormat format = new javax.sound.sampled.AudioFormat(
+                    44100.0f, 16, 1, true, false);
+
+            // Kiểm tra microphone bằng cách ghi âm 1 giây
+            System.out.println("Testing microphone...");
+            boolean micWorks = false;
+
+            try {
+                javax.sound.sampled.DataLine.Info micInfo = new javax.sound.sampled.DataLine.Info(
+                        javax.sound.sampled.TargetDataLine.class, format);
+
+                if (javax.sound.sampled.AudioSystem.isLineSupported(micInfo)) {
+                    javax.sound.sampled.TargetDataLine mic = (javax.sound.sampled.TargetDataLine) javax.sound.sampled.AudioSystem
+                            .getLine(micInfo);
+                    mic.open(format);
+                    mic.start();
+
+                    // Ghi 1 giây âm thanh
+                    byte[] buffer = new byte[(int) format.getSampleRate() * format.getFrameSize()];
+                    int bytesRead = mic.read(buffer, 0, buffer.length);
+
+                    // Kiểm tra nếu có dữ liệu
+                    boolean hasData = false;
+                    for (int i = 0; i < bytesRead; i++) {
+                        if (buffer[i] != 0) {
+                            hasData = true;
+                            break;
+                        }
+                    }
+
+                    if (hasData) {
+                        System.out.println("Microphone successfully captured audio data!");
+
+                        // Tính mức độ âm thanh
+                        double level = calculateAudioLevel(buffer, bytesRead);
+                        System.out.println("Microphone audio level: " + level);
+
+                        if (level < 0.01) {
+                            System.out.println("WARNING: Audio level is very low - speak louder or check mic volume");
+                        }
+
+                        micWorks = true;
+
+                        // Lưu dữ liệu mic để kiểm tra
+                        try {
+                            File testDir = new File("audio_test");
+                            testDir.mkdir();
+
+                            // Tạo file WAV đơn giản
+                            File testFile = new File("audio_test/mic_test.raw");
+                            FileOutputStream fos = new FileOutputStream(testFile);
+                            fos.write(buffer, 0, bytesRead);
+                            fos.close();
+
+                            System.out.println("Saved microphone test data to: " + testFile.getAbsolutePath());
+                        } catch (Exception e) {
+                            System.out.println("Could not save mic test file: " + e.getMessage());
+                        }
+                    } else {
+                        System.out.println("WARNING: Microphone did not capture any non-zero data!");
+                    }
+
+                    mic.stop();
+                    mic.close();
+                } else {
+                    System.out.println("Microphone line is not supported!");
+                }
+            } catch (Exception e) {
+                System.out.println("Error testing microphone: " + e.getMessage());
+                e.printStackTrace();
+            }
+
+            // Kiểm tra loa bằng cách phát âm thanh test
+            System.out.println("Testing speakers...");
+
+            try {
+                javax.sound.sampled.DataLine.Info speakerInfo = new javax.sound.sampled.DataLine.Info(
+                        javax.sound.sampled.SourceDataLine.class, format);
+
+                if (javax.sound.sampled.AudioSystem.isLineSupported(speakerInfo)) {
+                    javax.sound.sampled.SourceDataLine spk = (javax.sound.sampled.SourceDataLine) javax.sound.sampled.AudioSystem
+                            .getLine(speakerInfo);
+                    spk.open(format);
+                    spk.start();
+
+                    // Tạo âm thanh test (beep đơn giản)
+                    byte[] testTone = new byte[(int) format.getSampleRate() * format.getFrameSize()];
+                    generateTestTone(testTone, testTone.length);
+
+                    // Phát âm thanh
+                    spk.write(testTone, 0, testTone.length);
+                    spk.drain();
+                    spk.close();
+
+                    System.out.println("Speaker test complete - you should have heard a tone");
+                } else {
+                    System.out.println("Speaker line is not supported!");
+                }
+            } catch (Exception e) {
+                System.out.println("Error testing speakers: " + e.getMessage());
+                e.printStackTrace();
+            }
+
+            // Kiểm tra hệ thống âm thanh Java
+            javax.sound.sampled.Mixer.Info[] mixers = javax.sound.sampled.AudioSystem.getMixerInfo();
+            System.out.println("\nAvailable audio devices (" + mixers.length + "):");
+            for (javax.sound.sampled.Mixer.Info info : mixers) {
+                System.out.println("- " + info.getName() + " - " + info.getDescription());
+            }
+
+            System.out.println("\nAudio test summary:");
+            System.out.println("- Microphone working: " + (micWorks ? "YES" : "NO"));
+            System.out.println("- Speaker test completed");
+            System.out.println("====== END AUDIO TEST ======");
+
+            // Create a final copy of micWorks for use in the lambda
+            final boolean micWorksStatus = micWorks;
+
+            // Hiển thị thông báo cho người dùng
+            Platform.runLater(() -> {
+                if (micWorksStatus) {
+                    showAlert("Kiểm tra âm thanh", "Microphone hoạt động bình thường!\n\n" +
+                            "Bạn cũng nên đã nghe thấy âm thanh test từ loa của bạn.\n\n" +
+                            "Kiểm tra terminal để biết thêm thông tin chi tiết.");
+                } else {
+                    showAlert("Kiểm tra âm thanh",
+                            "CẢNH BÁO: Microphone không hoạt động hoặc không phát hiện âm thanh!\n\n" +
+                                    "Vui lòng kiểm tra thiết bị âm thanh của bạn.\n\n" +
+                                    "Kiểm tra terminal để biết thêm thông tin chi tiết.");
+                }
+            });
+
+        } catch (Exception e) {
+            System.out.println("Error during audio test: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Tính toán mức độ âm thanh từ dữ liệu byte
+     */
+    private double calculateAudioLevel(byte[] audioData, int length) {
+        // Với dữ liệu 16-bit, chuyển bytes thành short samples
+        long sum = 0;
+        int sampleSize = 2; // 16 bit = 2 bytes
+        int count = 0;
+
+        for (int i = 0; i < length - 1; i += sampleSize) {
+            if (i + 1 < length) {
+                // Chuyển 2 bytes thành 1 short sample (little endian)
+                short sample = (short) ((audioData[i + 1] << 8) | (audioData[i] & 0xFF));
+                sum += Math.abs(sample);
+                count++;
+            }
+        }
+
+        return count > 0 ? (sum / (double) count) / 32768.0 : 0.0; // Normalize to 0.0-1.0
     }
 
     /**
      * Receive audio data from the other party and play it
      */
     public void receiveAudioData(String sender, byte[] audioData, int length) {
-        if (isCallActive && speakers != null && speakers.isOpen()) {
-            // Write the received audio data to the speakers
-            speakers.write(audioData, 0, length);
+        try {
+            if (isCallActive && speakers != null && speakers.isOpen()) {
+                // Cập nhật thời gian nhận audio gần nhất
+                lastAudioDataTime = System.currentTimeMillis();
+
+                // Kiểm tra dữ liệu âm thanh trước khi phát
+                boolean hasAudioContent = false;
+                for (int i = 0; i < Math.min(length, 100); i++) {
+                    if (audioData[i] != 0) {
+                        hasAudioContent = true;
+                        break;
+                    }
+                }
+
+                // Đánh dấu rằng đang nhận dữ liệu
+                if (hasAudioContent && !isAudioDataBeingReceived) {
+                    isAudioDataBeingReceived = true;
+                    System.out.println("Audio data is being received from " + sender);
+                }
+
+                if (!hasAudioContent) {
+                    // Nếu gói tin chỉ chứa các byte 0, ghi log cảnh báo
+                    if (receivedPacketsCount % 100 == 0) {
+                        System.out.println("WARNING: Received empty audio packet (all zeros) from " + sender);
+                    }
+                }
+
+                // Kiểm tra và ghi log mỗi 100 gói tin
+                receivedPacketsCount++;
+
+                if (receivedPacketsCount % 100 == 0) {
+                    System.out.println("Received " + receivedPacketsCount + " audio packets from " + sender
+                            + ", last size: " + length + " bytes");
+
+                    // Thêm phân tích về mức độ âm thanh
+                    if (hasAudioContent) {
+                        // Tính toán mức độ âm thanh trung bình
+                        double avgLevel = calculateAudioLevel(audioData, length);
+                        System.out.println("Audio level from " + sender + ": " + avgLevel);
+
+                        // Thử tăng cường độ âm thanh nếu quá nhỏ
+                        if (avgLevel < 0.01) {
+                            amplifyAudio(audioData, length, 10.0);
+                            System.out.println("Amplified low audio signal by 10x");
+                        }
+                    }
+                }
+
+                // Viết dữ liệu âm thanh đã nhận vào loa
+                speakers.write(audioData, 0, length);
+            } else {
+                // Only log message every 200 packets to avoid flooding console
+                if (receivedPacketsCount % 200 == 0) {
+                    if (!isCallActive) {
+                        System.out.println("Received audio data but call is not active");
+
+                        // Auto-initialize call if we're receiving data but call isn't active
+                        if (sender != null && !sender.isEmpty()) {
+                            System.out.println("Auto-accepting call from " + sender);
+                            acceptIncomingCall(sender);
+                        }
+                    } else if (speakers == null || !speakers.isOpen()) {
+                        System.out.println("Received audio data but speakers are not ready");
+
+                        // Thử mở lại loa nếu đã đóng
+                        if (speakers != null && !speakers.isOpen() && isCallActive) {
+                            try {
+                                reopenAudioDevices();
+                            } catch (Exception e) {
+                                System.out.println("Failed to reopen audio devices: " + e.getMessage());
+                            }
+                        }
+                    }
+                }
+                receivedPacketsCount++;
+            }
+        } catch (Exception ex) {
+            System.out.println("ERROR playing received audio: " + ex.getMessage());
+            ex.printStackTrace();
+
+            // Thử mở lại loa nếu có lỗi
+            try {
+                reopenAudioDevices();
+            } catch (Exception e) {
+                System.out.println("Failed to reopen audio devices after error: " + e.getMessage());
+            }
         }
+    }
+
+    /**
+     * Tăng cường độ âm thanh
+     */
+    private void amplifyAudio(byte[] audioData, int length, double factor) {
+        // Với dữ liệu 16-bit, xử lý từng cặp byte
+        for (int i = 0; i < length - 1; i += 2) {
+            if (i + 1 < length) {
+                // Chuyển 2 bytes thành 1 short sample (little endian)
+                short sample = (short) ((audioData[i + 1] << 8) | (audioData[i] & 0xFF));
+
+                // Tăng cường độ (giới hạn để tránh tràn số)
+                double amplified = sample * factor;
+                if (amplified > 32767)
+                    amplified = 32767;
+                if (amplified < -32768)
+                    amplified = -32768;
+
+                short newSample = (short) amplified;
+
+                // Ghi ngược lại vào buffer (little endian)
+                audioData[i] = (byte) (newSample & 0xFF);
+                audioData[i + 1] = (byte) ((newSample >> 8) & 0xFF);
+            }
+        }
+    }
+
+    /**
+     * Mở lại các thiết bị âm thanh khi bị đóng bất ngờ
+     */
+    private void reopenAudioDevices() throws Exception {
+        System.out.println("Attempting to reopen audio devices...");
+
+        // Tạo định dạng âm thanh
+        javax.sound.sampled.AudioFormat format = new javax.sound.sampled.AudioFormat(
+                44100.0f, 16, 1, true, false);
+
+        // Mở lại microphone nếu đã đóng
+        if (microphone == null || !microphone.isOpen()) {
+            javax.sound.sampled.DataLine.Info micInfo = new javax.sound.sampled.DataLine.Info(
+                    javax.sound.sampled.TargetDataLine.class, format);
+
+            if (javax.sound.sampled.AudioSystem.isLineSupported(micInfo)) {
+                microphone = (javax.sound.sampled.TargetDataLine) javax.sound.sampled.AudioSystem.getLine(micInfo);
+                microphone.open(format);
+                microphone.start();
+                System.out.println("Microphone reopened successfully");
+            } else {
+                System.out.println("Microphone line is not supported!");
+            }
+        }
+
+        // Mở lại loa nếu đã đóng
+        if (speakers == null || !speakers.isOpen()) {
+            javax.sound.sampled.DataLine.Info speakerInfo = new javax.sound.sampled.DataLine.Info(
+                    javax.sound.sampled.SourceDataLine.class, format);
+
+            if (javax.sound.sampled.AudioSystem.isLineSupported(speakerInfo)) {
+                speakers = (javax.sound.sampled.SourceDataLine) javax.sound.sampled.AudioSystem.getLine(speakerInfo);
+                speakers.open(format);
+                speakers.start();
+                System.out.println("Speakers reopened successfully");
+            } else {
+                System.out.println("Speaker line is not supported!");
+            }
+        }
+    }
+
+    /**
+     * Bắt đầu luồng gọi điện thoại
+     */
+    private void startEnhancedVoiceStreaming(String otherParty) {
+        try {
+            // Tạo định dạng âm thanh
+            javax.sound.sampled.AudioFormat format = new javax.sound.sampled.AudioFormat(
+                    44100.0f, 16, 1, true, false);
+
+            // Tạo thông tin cho microphone
+            javax.sound.sampled.DataLine.Info micInfo = new javax.sound.sampled.DataLine.Info(
+                    javax.sound.sampled.TargetDataLine.class, format);
+
+            // Tạo thông tin cho loa
+            javax.sound.sampled.DataLine.Info speakerInfo = new javax.sound.sampled.DataLine.Info(
+                    javax.sound.sampled.SourceDataLine.class, format);
+
+            // Kiểm tra thiết bị âm thanh
+            if (!javax.sound.sampled.AudioSystem.isLineSupported(micInfo)) {
+                System.out.println("ERROR: Microphone not supported");
+                showAlert("Lỗi Microphone", "Microphone không được hỗ trợ trên thiết bị này.");
+                endVoiceCall();
+                return;
+            }
+
+            if (!javax.sound.sampled.AudioSystem.isLineSupported(speakerInfo)) {
+                System.out.println("ERROR: Speakers not supported");
+                showAlert("Lỗi Loa", "Loa không được hỗ trợ trên thiết bị này.");
+                endVoiceCall();
+                return;
+            }
+
+            // Mở microphone
+            microphone = (javax.sound.sampled.TargetDataLine) javax.sound.sampled.AudioSystem.getLine(micInfo);
+            microphone.open(format);
+            microphone.start();
+
+            // Mở loa
+            speakers = (javax.sound.sampled.SourceDataLine) javax.sound.sampled.AudioSystem.getLine(speakerInfo);
+            speakers.open(format);
+            speakers.start();
+
+            // Phát âm thanh test để người dùng biết đã kết nối
+            // Tạo âm thanh test (beep đơn giản)
+            byte[] testTone = new byte[format.getFrameSize() * (int) (format.getSampleRate() * 0.2)]; // 200ms
+            generateTestTone(testTone, testTone.length);
+
+            // Phát âm thanh
+            speakers.write(testTone, 0, testTone.length);
+
+            System.out.println("Audio devices initialized successfully");
+
+            // Set call as active
+            isCallActive = true;
+            System.out.println("Call with " + otherParty + " is now active");
+
+            // Tạo luồng cho cuộc gọi
+            callThreadRunning = true;
+            callThread = new Thread(() -> {
+                try {
+                    // Kích thước buffer cho dữ liệu âm thanh
+                    byte[] buffer = new byte[4096];
+
+                    // Thời gian bắt đầu
+                    long startTime = System.currentTimeMillis();
+
+                    // Lưu thời gian gửi/nhận gần nhất
+                    lastAudioDataTime = startTime;
+
+                    // Reset biến đếm
+                    sentPacketsCount = 0;
+                    receivedPacketsCount = 0;
+
+                    while (callThreadRunning) {
+                        if (microphone != null && microphone.isOpen()) {
+                            // Đọc dữ liệu từ microphone
+                            int bytesRead = microphone.read(buffer, 0, buffer.length);
+
+                            if (bytesRead > 0) {
+                                // Kiểm tra xem có âm thanh thực sự không
+                                boolean hasSound = false;
+                                for (int i = 0; i < Math.min(bytesRead, 100); i++) {
+                                    if (buffer[i] != 0) {
+                                        hasSound = true;
+                                        break;
+                                    }
+                                }
+
+                                // Đánh dấu đang gửi dữ liệu
+                                if (hasSound && !isAudioDataBeingSent) {
+                                    isAudioDataBeingSent = true;
+                                    System.out.println("Audio data is being sent to " + otherParty);
+                                }
+
+                                // Gửi dữ liệu âm thanh
+                                sendAudioData(otherParty, buffer, bytesRead);
+                            }
+                        }
+
+                        // Kiểm tra xem có nhận được dữ liệu gần đây không
+                        long currentTime = System.currentTimeMillis();
+                        if ((currentTime - lastAudioDataTime) > 5000) { // 5 giây không nhận được dữ liệu
+                            if (isAudioDataBeingReceived) {
+                                System.out.println("WARNING: No audio data received for 5 seconds");
+                                isAudioDataBeingReceived = false;
+                            }
+                        }
+
+                        // Ngủ một chút để giảm tải CPU
+                        try {
+                            Thread.sleep(10);
+                        } catch (InterruptedException e) {
+                            System.out.println("Audio thread interrupted - expected during shutdown");
+                            break;
+                        }
+                    }
+                } catch (Exception e) {
+                    System.out.println("ERROR in voice call thread: " + e.getMessage());
+                    e.printStackTrace();
+                } finally {
+                    // Đóng các tài nguyên âm thanh
+                    closeAudioResources();
+                }
+            });
+
+            // Bắt đầu luồng
+            callThread.setDaemon(true);
+            callThread.start();
+
+            System.out.println("Voice call thread started with " + otherParty);
+
+        } catch (Exception e) {
+            System.out.println("ERROR starting voice streaming: " + e.getMessage());
+            e.printStackTrace();
+            endVoiceCall();
+        }
+    }
+
+    // Biến tĩnh đếm số gói tin đã nhận
+    private static int receivedPacketsCount = 0;
+
+    /**
+     * Kiểm tra thiết bị âm thanh có hoạt động không
+     */
+    private boolean checkAudioDevices() {
+        boolean result = true;
+        System.out.println("Checking audio devices...");
+
+        try {
+            // Kiểm tra microphone
+            javax.sound.sampled.AudioFormat format = new javax.sound.sampled.AudioFormat(
+                    44100.0f, 16, 1, true, false);
+
+            javax.sound.sampled.DataLine.Info micInfo = new javax.sound.sampled.DataLine.Info(
+                    javax.sound.sampled.TargetDataLine.class, format);
+
+            if (!javax.sound.sampled.AudioSystem.isLineSupported(micInfo)) {
+                System.out.println("ERROR: Microphone not supported!");
+                result = false;
+            } else {
+                // Thử mở microphone
+                try {
+                    javax.sound.sampled.TargetDataLine mic = (javax.sound.sampled.TargetDataLine) javax.sound.sampled.AudioSystem
+                            .getLine(micInfo);
+                    mic.open(format);
+                    System.out.println("Microphone test: OK");
+                    mic.close();
+                } catch (Exception e) {
+                    System.out.println("ERROR opening microphone: " + e.getMessage());
+                    result = false;
+                }
+            }
+
+            // Kiểm tra speakers
+            javax.sound.sampled.DataLine.Info speakerInfo = new javax.sound.sampled.DataLine.Info(
+                    javax.sound.sampled.SourceDataLine.class, format);
+
+            if (!javax.sound.sampled.AudioSystem.isLineSupported(speakerInfo)) {
+                System.out.println("ERROR: Speakers not supported!");
+                result = false;
+            } else {
+                // Thử mở speakers
+                try {
+                    javax.sound.sampled.SourceDataLine spk = (javax.sound.sampled.SourceDataLine) javax.sound.sampled.AudioSystem
+                            .getLine(speakerInfo);
+                    spk.open(format);
+                    System.out.println("Speakers test: OK");
+                    spk.close();
+                } catch (Exception e) {
+                    System.out.println("ERROR opening speakers: " + e.getMessage());
+                    result = false;
+                }
+            }
+
+        } catch (Exception e) {
+            System.out.println("ERROR checking audio devices: " + e.getMessage());
+            e.printStackTrace();
+            result = false;
+        }
+
+        return result;
     }
 
     /**
      * Close audio resources
      */
     private void closeAudioResources() {
-        // Close microphone if open
-        if (microphone != null && microphone.isOpen()) {
-            microphone.stop();
-            microphone.close();
-            microphone = null;
-        }
+        try {
+            callThreadRunning = false;
 
-        // Close speakers if open
-        if (speakers != null && speakers.isOpen()) {
-            speakers.stop();
-            speakers.drain();
-            speakers.close();
-            speakers = null;
-        }
+            if (callThread != null) {
+                callThread.interrupt();
+                callThread = null;
+            }
 
-        isCallActive = false;
+            if (microphone != null) {
+                microphone.stop();
+                microphone.close();
+                microphone = null;
+            }
+
+            if (speakers != null) {
+                speakers.stop();
+                speakers.close();
+                speakers = null;
+            }
+
+            isCallActive = false;
+            System.out.println("Audio resources closed");
+        } catch (Exception e) {
+            System.out.println("Error closing audio resources: " + e.getMessage());
+        }
     }
 
-    /**
-     * Update the call button appearance based on call state
-     */
     private void updateCallButtonAppearance(boolean isActive) {
+        // Biến này được gọi trong cả luồng FX và luồng khác, nên phải dùng
+        // Platform.runLater
         Platform.runLater(() -> {
-            isCallActive = isActive;
-
             if (isActive) {
-                // Change button appearance for active call
-                btnVoiceCall
-                        .setStyle("-fx-background-color: #ff4d4d; -fx-border-color: #cc0000; -fx-border-radius: 15;");
-
-                // Change tooltip
-                Tooltip tooltip = new Tooltip("Kết thúc cuộc gọi");
-                btnVoiceCall.setTooltip(tooltip);
-
+                btnVoiceCall.getStyleClass().add("active-call-button");
+                btnVoiceCall.setText("Kết thúc gọi");
+                isCallActive = true;
             } else {
-                // Reset button appearance
-                btnVoiceCall.setStyle(
-                        "-fx-background-color: transparent; -fx-border-color: #dddddd; -fx-border-radius: 15;");
-
-                // Reset tooltip
-                Tooltip tooltip = new Tooltip("Gọi thoại");
-                btnVoiceCall.setTooltip(tooltip);
+                btnVoiceCall.getStyleClass().remove("active-call-button");
+                btnVoiceCall.setText("Gọi");
+                isCallActive = false;
             }
         });
     }
+
+    // Khai báo biến kiểm soát âm thanh
+    private boolean isAudioDataBeingReceived = false;
+    private boolean isAudioDataBeingSent = false;
+    private long lastAudioDataTime = 0;
 }
